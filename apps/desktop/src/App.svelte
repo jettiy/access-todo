@@ -11,10 +11,16 @@
   let synced = "로딩중";
   let errorMsg = "";
   let collapsed = false;
+  let onTop = true; // 항상 위 상태 (기본 켜짐)
 
   const meta = AGENT_META[AGENT] || AGENT_META.user;
   const appWindow = getCurrentWindow();
   const pEmoji = (p: string) => (p === "high" ? "🔴" : p === "low" ? "🟢" : "🟡");
+
+  async function toggleOnTop() {
+    onTop = !onTop;
+    await appWindow.setAlwaysOnTop(onTop);
+  }
 
   async function refresh() {
     try {
@@ -65,6 +71,9 @@
   <header on:mousedown={startDrag}>
     <span class="title">{meta.emoji} {meta.title}</span>
     <div class="window-controls">
+      <button class="win-btn" on:click={toggleOnTop} title={onTop ? "항상 위 해제" : "항상 위 설정"} class:active={onTop}>
+        📌
+      </button>
       <button class="win-btn" on:click={toggleCollapse} title={collapsed ? "펼치기" : "접기"}>
         {collapsed ? "▾" : "▴"}
       </button>
@@ -153,6 +162,7 @@
     color: var(--text); padding: 0; display: flex; align-items: center; justify-content: center;
   }
   .win-btn:hover { background: rgba(0,0,0,0.2); }
+  .win-btn.active { background: rgba(0,0,0,0.25); font-weight: bold; }
   .close-btn:hover { background: #e81123; color: white; }
   ul { list-style: none; padding: 0; margin: 0; flex: 1; overflow-y: auto; }
   li { padding: 4px 0; font-size: 13px; border-bottom: 1px dashed rgba(0,0,0,0.08); }
