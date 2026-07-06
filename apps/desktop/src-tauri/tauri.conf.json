@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "PostIt Todo",
+  "productName": "오늘의 할 일 (Access)",
   "version": "0.1.0",
-  "identifier": "com.desktoppostit.app",
+  "identifier": "com.access.postit",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420"
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "postit",
-        "title": "Post-it",
+        "title": "오늘의 할 일 (Access)",
         "width": 320,
         "height": 480,
         "minWidth": 240,

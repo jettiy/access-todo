@@ -78,6 +78,10 @@ impl GistClient {
             .and_then(|v| v.to_str().ok())
             .map(|s| s.to_string());
         let status = resp.status();
+        // 304 Not Modified: 캐시가 유효하므로 빈 문서 반환 (호출자가 로컬 유지)
+        if status == reqwest::StatusCode::NOT_MODIFIED {
+            return Ok((TodoDoc::new("cache-hit"), etag_out));
+        }
         let body = resp
             .json::<GistResp>()
             .await

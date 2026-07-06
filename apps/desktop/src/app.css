@@ -2,21 +2,9 @@
   color-scheme: light;
   font-family: "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
 }
-
-* {
-  box-sizing: border-box;
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: transparent; overflow: hidden;
 }
-
-html,
-body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  /* 불투명 포스트잇 배경 — 투명 영역 없이 창 전체가 노란색 */
-  background: #fff0a0;
-  overflow: hidden;
-}
-
-#app {
-  height: 100%;
-}
+#app { height: 100%; }
