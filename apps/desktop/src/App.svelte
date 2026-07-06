@@ -25,6 +25,11 @@
   $: theme = colors[colorIdx];
 
   const appWindow = getCurrentWindow();
+
+  // 헤더를 누르고 있으면 창 드래그 시작 (mousedown → startDragging)
+  function startDrag() {
+    appWindow.startDragging();
+  }
   const pEmoji = (p: string) => (p === "high" ? "🔴" : p === "low" ? "🟢" : "🟡");
 
   // 에이전트/카테고리별 그룹화
@@ -110,10 +115,10 @@
   $: doneCount = todos.filter((t) => t.done).length;
 </script>
 
-<main class:collapsed style="--bg:{theme.bg}; --bg-soft:{theme.bgSoft}; --border:{theme.border}; --text:{theme.text};">
-  <!-- 헤더: 드래그로 창 이동, 우측 컨트롤 버튼들 -->
-  <header data-tauri-drag-region>
-    <span class="title" data-tauri-drag-region>📒 오늘의 할 일</span>
+<main class:collapsed={collapsed} style="--bg:{theme.bg}; --bg-soft:{theme.bgSoft}; --border:{theme.border}; --text:{theme.text};">
+  <!-- 헤더: mousedown으로 창 드래그, 우측 컨트롤 버튼들 -->
+  <header on:mousedown={startDrag}>
+    <span class="title">📒 오늘의 할 일</span>
     <div class="window-controls">
       <button class="win-btn" on:click={cycleColor} title="색상 변경">🎨</button>
       <button class="win-btn" on:click={toggleCollapse} title={collapsed ? "펼치기" : "접기"}>
