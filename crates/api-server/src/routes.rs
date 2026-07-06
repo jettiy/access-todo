@@ -101,7 +101,7 @@ pub fn router(state: AppState) -> Router {
         .route("/todos/:id/complete", post(complete))
         .route("/categories", post(create_category))
         .route("/categories/reorder", post(reorder_category))
-        .route("/categories/:id", axum::routing::patch(rename_category))
+        .route("/categories/:id", axum::routing::patch(rename_category).delete(delete_category))
         .route("/sync", post(sync_handler))
         .route("/health", get(|| async { "ok" }))
         .layer(cors)
@@ -159,6 +159,26 @@ async fn reorder_category(
         Ok(()) => {
             if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
             Ok(Json(serde_json::json!({ "ok": true })))
+        }
+        Err(_) => Err(StatusCode::NOT_FOUND),
+    }
+}
+
+/// DELETE /categories/:id — delete a category. Todos in it become uncategorized.
+async fn delete_category(
+    State(s): State<AppState>,
+    Path(id): Path<String>,
+    h: HeaderMap,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let actor = agent_from_headers(&h);
+    let result = {
+        let mut st = s.store.lock().await;
+        st.delete_category(&id)
+    };
+    match result {
+        Ok(()) => {
+            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            Ok(Json(serde_json::json!({ "deleted": id })))
         }
         Err(_) => Err(StatusCode::NOT_FOUND),
     }

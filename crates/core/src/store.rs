@@ -122,6 +122,23 @@ impl Store {
         Ok(c.clone())
     }
 
+    /// Delete a category by id. Todos referencing it get category_id cleared
+    /// (moved to "uncategorized") rather than deleted.
+    pub fn delete_category(&mut self, id: &str) -> Result<()> {
+        let before = self.categories.len();
+        self.categories.retain(|c| c.id != id);
+        if self.categories.len() == before {
+            return Err(CoreError::NotFound(format!("category {id}")));
+        }
+        // Clear category_id on todos that referenced this category.
+        for t in self.todos.iter_mut() {
+            if t.category_id.as_deref() == Some(id) {
+                t.category_id = None;
+            }
+        }
+        Ok(())
+    }
+
     /// Reorder categories for an agent. `ordered_ids` is the desired order.
     pub fn reorder_categories(&mut self, agent: &str, ordered_ids: &[String]) -> Result<()> {
         let now = Utc::now();

@@ -67,6 +67,21 @@
     await refresh();
   }
 
+  function cancelRename() {
+    renamingId = null;
+    renameText = "";
+  }
+
+  async function deleteCategory(cat: Category) {
+    const todoCount = todosByCategory(cat.id).length;
+    const msg = todoCount > 0
+      ? `'${cat.name}' 삭제? ${todoCount}개 할 일은 미분류로 이동합니다.`
+      : `'${cat.name}' 삭제?`;
+    if (!confirm(msg)) return;
+    await api.deleteCategory(cat.id);
+    await refresh();
+  }
+
   async function moveCategory(idx: number, dir: -1 | 1) {
     const newIdx = idx + dir;
     if (newIdx < 0 || newIdx >= categories.length) return;
@@ -131,15 +146,20 @@
         <section class="cat-section">
           <div class="cat-header">
             {#if renamingId === cat.id}
-              <input class="rename-input" bind:value={renameText} on:keydown={(e) => e.key === "Enter" && confirmRename()} on:blur={confirmRename} />
+              <input class="rename-input" bind:value={renameText} on:keydown={(e) => e.key === "Enter" && confirmRename() || e.key === "Escape" && cancelRename()} />
+              <div class="cat-controls" on:mousedown|stopPropagation>
+                <button class="cat-btn confirm" on:click={confirmRename} title="확인">✓</button>
+                <button class="cat-btn" on:click={cancelRename} title="취소">✕</button>
+              </div>
             {:else}
               <span class="cat-name" on:dblclick={() => startRename(cat)}>📂 {cat.name}</span>
+              <div class="cat-controls" on:mousedown|stopPropagation>
+                <button class="cat-btn" on:click={() => startRename(cat)} title="이름 변경">✏️</button>
+                <button class="cat-btn" on:click={() => moveCategory(idx, -1)} title="위로" disabled={idx === 0}>▲</button>
+                <button class="cat-btn" on:click={() => moveCategory(idx, 1)} title="아래로" disabled={idx === categories.length - 1}>▼</button>
+                <button class="cat-btn danger" on:click={() => deleteCategory(cat)} title="삭제">🗑️</button>
+              </div>
             {/if}
-            <div class="cat-controls" on:mousedown|stopPropagation>
-              <button class="cat-btn" on:click={() => startRename(cat)} title="이름 변경">✏️</button>
-              <button class="cat-btn" on:click={() => moveCategory(idx, -1)} title="위로" disabled={idx === 0}>▲</button>
-              <button class="cat-btn" on:click={() => moveCategory(idx, 1)} title="아래로" disabled={idx === categories.length - 1}>▼</button>
-            </div>
           </div>
           <ul>
             {#each todosByCategory(cat.id) as t (t.id)}
@@ -277,6 +297,8 @@
   }
   .cat-btn:hover { opacity: 1; }
   .cat-btn:disabled { opacity: 0.2; cursor: default; }
+  .cat-btn.confirm { color: green; opacity: 0.8; }
+  .cat-btn.danger:hover { color: #c00; }
   .rename-input {
     font-size: 12px; font-weight: 600; border: 1px solid var(--border);
     border-radius: 3px; padding: 1px 4px; background: white; color: var(--text); flex: 1;

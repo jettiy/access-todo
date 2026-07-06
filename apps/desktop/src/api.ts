@@ -78,6 +78,8 @@ export const api = {
     req<Category>("/categories", { method: "POST", body: JSON.stringify({ agent: AGENT, name }) }),
   renameCategory: (id: string, name: string) =>
     req<Category>(`/categories/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }),
+  deleteCategory: (id: string) =>
+    req<{ deleted: string }>(`/categories/${id}`, { method: "DELETE" }),
   reorderCategories: (orderedIds: string[]) =>
     req<{ ok: boolean }>("/categories/reorder", { method: "POST", body: JSON.stringify({ agent: AGENT, ordered_ids: orderedIds }) }),
 };
