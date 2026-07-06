@@ -1,0 +1,6 @@
+.playwright-mcp/
+*.png
+*.jpg
+*.jpeg
+node_modules/
+target/
