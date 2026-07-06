@@ -22,6 +22,14 @@
     await appWindow.setAlwaysOnTop(onTop);
   }
 
+  // 헤더 드래그는 제목 영역에서만 작동 (버튼 클릭 방해 방지)
+  function titleMousedown(e: MouseEvent) {
+    // 버튼이나 컨트롤 영역에서는 드래그 시작 안 함
+    const target = e.target as HTMLElement;
+    if (target.closest('.window-controls') || target.closest('button')) return;
+    startDrag();
+  }
+
   async function refresh() {
     try {
       const r = await api.list();
@@ -68,9 +76,9 @@
 
 <main class:collapsed
   style="--bg:{meta.bg}; --bg-soft:{meta.bgSoft}; --border:{meta.border}; --text:{meta.text};">
-  <header on:mousedown={startDrag}>
-    <span class="title">{meta.emoji} {meta.title}</span>
-    <div class="window-controls">
+  <header on:mousedown={titleMousedown}>
+    <span class="title" on:mousedown={titleMousedown}>{meta.emoji} {meta.title}</span>
+    <div class="window-controls" on:mousedown|stopPropagation>
       <button class="win-btn" on:click={toggleOnTop} title={onTop ? "항상 위 해제" : "항상 위 설정"} class:active={onTop}>
         📌
       </button>
