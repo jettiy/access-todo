@@ -11,6 +11,7 @@ tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tower = "0.5"
+tower-http = { version = "0.6", features = ["cors"] }
 anyhow = "1"
 http = "1"
 

@@ -57,6 +57,12 @@ fn parse_prio(s: String) -> Priority {
 }
 
 pub fn router(state: AppState) -> Router {
+    use tower_http::cors::{Any, CorsLayer};
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     Router::new()
         .route("/todos", get(list).post(add))
         .route("/todos/today", get(today))
@@ -65,6 +71,7 @@ pub fn router(state: AppState) -> Router {
         .route("/todos/:id/toggle", post(toggle))
         .route("/sync", post(sync_handler))
         .route("/health", get(|| async { "ok" }))
+        .layer(cors)
         .with_state(state)
 }
 

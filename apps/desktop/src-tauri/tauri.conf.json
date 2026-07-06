@@ -13,17 +13,20 @@
         "label": "postit",
         "title": "Post-it",
         "width": 320,
-        "height": 500,
+        "height": 480,
+        "minWidth": 240,
+        "minHeight": 120,
         "decorations": false,
-        "transparent": true,
+        "transparent": false,
         "alwaysOnTop": true,
         "resizable": true,
-        "skipTaskbar": true,
-        "shadow": true
+        "skipTaskbar": false,
+        "shadow": true,
+        "backgroundColor": "#fff0a0"
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://127.0.0.1:7878 http://localhost:7878 ws://localhost:7878"
     }
   },
   "bundle": {
