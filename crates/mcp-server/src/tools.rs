@@ -104,6 +104,22 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
                 .json::<Value>().await?;
             r
         }
+        "complete_todo" => {
+            // 작업 완료 + 요약 기록. summary 인수로 무엇을 했는지 전달.
+            let id = id_of(&call.arguments)?;
+            let summary = call.arguments["summary"]
+                .as_str()
+                .unwrap_or("작업 완료");
+            let body = serde_json::json!({ "summary": summary });
+            let r = client
+                .post(format!("{API_BASE}/todos/{id}/complete"))
+                .header("X-Agent", &agent)
+                .header("Content-Type", "application/json")
+                .json(&body)
+                .send().await?
+                .json::<Value>().await?;
+            r
+        }
         "delete_todo" => {
             let id = id_of(&call.arguments)?;
             let r = client
@@ -196,6 +212,19 @@ pub fn tool_catalog() -> Vec<Value> {
                 "properties": {
                     "id": { "type": "string" },
                     "agent": { "type": "string", "description": "체크한 에이전트 이름" }
+                }
+            }
+        }),
+        serde_json::json!({
+            "name": "complete_todo",
+            "description": "작업을 완료로 표시하고 summary에 작업 내용 요약을 기록합니다. 코드/파일 수정을 마친 후 호출하세요. summary에는 무엇을 변경했는지 간결히 작성하세요 (예: 'job_select.lua 51줄 nil 체크 추가').",
+            "inputSchema": {
+                "type": "object",
+                "required": ["id", "summary"],
+                "properties": {
+                    "id": { "type": "string", "description": "완료할 할 일 id" },
+                    "summary": { "type": "string", "description": "작업 요약. 무엇을 했는지, 어떤 파일을 변경했는지" },
+                    "agent": { "type": "string", "description": "에이전트 이름" }
                 }
             }
         }),

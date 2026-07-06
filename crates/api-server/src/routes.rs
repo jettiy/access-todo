@@ -42,6 +42,12 @@ pub struct SearchQ {
     pub q: String,
 }
 
+/// Body for POST /todos/:id/complete
+#[derive(Deserialize)]
+pub struct CompleteBody {
+    pub summary: Option<String>,
+}
+
 #[derive(Deserialize, Default)]
 pub struct ListQ {
     #[serde(default)]
@@ -71,6 +77,7 @@ pub fn router(state: AppState) -> Router {
         .route("/todos/search", get(search))
         .route("/todos/:id", get(one).patch(update).delete(remove))
         .route("/todos/:id/toggle", post(toggle))
+        .route("/todos/:id/complete", post(complete))
         .route("/sync", post(sync_handler))
         .route("/health", get(|| async { "ok" }))
         .layer(cors)
@@ -191,6 +198,28 @@ async fn toggle(
     let result = {
         let mut st = s.store.lock().await;
         st.toggle(&id, &actor)
+    };
+    match result {
+        Ok(t) => {
+            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            Ok(Json(serde_json::to_value(t).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+        }
+        Err(_) => Err(StatusCode::NOT_FOUND),
+    }
+}
+
+/// POST /todos/:id/complete — 체크 + 작업 요약 기록
+async fn complete(
+    State(s): State<AppState>,
+    Path(id): Path<String>,
+    h: HeaderMap,
+    Json(b): Json<CompleteBody>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let actor = agent_from_headers(&h);
+    let summary = b.summary.unwrap_or_else(|| "작업 완료".into());
+    let result = {
+        let mut st = s.store.lock().await;
+        st.complete_with_summary(&id, &summary, &actor)
     };
     match result {
         Ok(t) => {

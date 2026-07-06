@@ -86,7 +86,9 @@
             <span class="prio">{pEmoji(t.priority)}</span>
             <span class="content">
               <span class="ttl">{t.title}</span>
-              {#if t.note}<span class="note">📝 {t.note}</span>{/if}
+              {#if t.note}
+                <span class="note">{t.note.startsWith('✓') ? '✅' : '📝'} {t.note}</span>
+              {/if}
               {#if t.completed_by && t.completed_by !== AGENT}
                 <span class="badge">✓ {t.completed_by}</span>
               {/if}

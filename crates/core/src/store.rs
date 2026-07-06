@@ -151,6 +151,42 @@ impl Store {
         Ok(t.clone())
     }
 
+    /// Mark a todo done and record a work summary (what was done).
+    /// The summary replaces the note with a "✓ <summary>" prefix and is
+    /// appended to history so the post-it shows what changed.
+    pub fn complete_with_summary(
+        &mut self,
+        id: &str,
+        summary: &str,
+        actor: &str,
+    ) -> Result<Todo> {
+        let now = Utc::now();
+        let t = self
+            .todos
+            .iter_mut()
+            .find(|t| t.id == id)
+            .ok_or_else(|| CoreError::NotFound(id.into()))?;
+        t.done = true;
+        t.completed_at = Some(now);
+        t.completed_by = Some(actor.into());
+        t.updated_at = Some(now);
+        t.updated_by = Some(actor.into());
+        // 요약을 note에 기록 (기존 note 보존)
+        let prev_note = t.note.take().unwrap_or_default();
+        let combined = if prev_note.is_empty() {
+            format!("✓ {summary}")
+        } else {
+            format!("{prev_note}\n✓ {summary}")
+        };
+        t.note = Some(combined);
+        t.history.push(HistoryEntry {
+            action: format!("completed: {summary}"),
+            at: now,
+            by: actor.into(),
+        });
+        Ok(t.clone())
+    }
+
     /// Delete a todo by id.
     pub fn delete(&mut self, id: &str, _actor: &str) -> Result<()> {
         let before = self.todos.len();
