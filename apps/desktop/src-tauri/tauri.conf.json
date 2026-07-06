@@ -8,23 +8,7 @@
     "devUrl": "http://localhost:1420"
   },
   "app": {
-    "windows": [
-      {
-        "label": "postit",
-        "title": "오늘의 할 일 (Access)",
-        "width": 320,
-        "height": 480,
-        "minWidth": 240,
-        "minHeight": 120,
-        "decorations": false,
-        "transparent": false,
-        "alwaysOnTop": true,
-        "resizable": true,
-        "skipTaskbar": false,
-        "shadow": true,
-        "backgroundColor": "#fff0a0"
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://127.0.0.1:7878 http://localhost:7878 ws://localhost:7878"
     }

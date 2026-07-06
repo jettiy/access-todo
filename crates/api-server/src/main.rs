@@ -21,7 +21,12 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let app = router(state);
-    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    // 기본은 127.0.0.1 (localhost 전용). TODO_BIND=0.0.0.0 으로 WSL/네트워크 접근 허용.
+    let host: std::net::IpAddr = std::env::var("TODO_BIND")
+        .unwrap_or_else(|_| "127.0.0.1".into())
+        .parse()
+        .unwrap_or("127.0.0.1".parse().unwrap());
+    let addr = SocketAddr::from((host, port));
     let listener = tokio::net::TcpListener::bind(addr).await?;
     println!("api-server listening on http://{addr}");
     println!("  Gist sync: {}", if std::env::var("GITHUB_TOKEN").is_ok() { "ON" } else { "OFF (in-memory only)" });

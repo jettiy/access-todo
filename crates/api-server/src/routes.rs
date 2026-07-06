@@ -46,6 +46,8 @@ pub struct SearchQ {
 pub struct ListQ {
     #[serde(default)]
     pub done: Option<bool>,
+    #[serde(default)]
+    pub agent: Option<String>,
 }
 
 fn parse_prio(s: String) -> Priority {
@@ -96,6 +98,11 @@ async fn list(
     let mut todos = st.list();
     if let Some(done) = q.done {
         todos.retain(|t| t.done == done);
+    }
+    // 에이전트별 필터: tags의 "agent:<name>" 또는 created_by 일치
+    if let Some(agent) = &q.agent {
+        let tag = format!("agent:{agent}");
+        todos.retain(|t| t.tags.iter().any(|x| x == &tag) || t.created_by == *agent);
     }
     Json(serde_json::json!({ "todos": todos }))
 }
