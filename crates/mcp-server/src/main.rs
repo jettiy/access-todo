@@ -1,17 +1,11 @@
 //! MCP stdio server: reads line-delimited JSON-RPC 2.0 from stdin, writes
-//! responses to stdout. Supports `initialize`, `tools/list`, `tools/call`.
-
-use std::sync::Arc;
+//! responses to stdout. Forwards all tool calls to the Access REST API.
 
 use mcp_server::tools::{dispatch, tool_catalog, ToolCall};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::sync::Mutex;
-
-use todo_core::store::Store;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let store = Arc::new(Mutex::new(Store::new()));
     let stdin = tokio::io::stdin();
     let mut reader = BufReader::new(stdin);
     let mut stdout = tokio::io::stdout();
@@ -36,7 +30,7 @@ async fn main() -> anyhow::Result<()> {
             "initialize" => serde_json::json!({
                 "protocolVersion": "2024-11-05",
                 "capabilities": { "tools": {} },
-                "serverInfo": { "name": "desktop-todo-agents", "version": env!("CARGO_PKG_VERSION") }
+                "serverInfo": { "name": "access-todo", "version": env!("CARGO_PKG_VERSION") }
             }),
             "tools/list" => serde_json::json!({ "tools": tool_catalog() }),
             "tools/call" => {
@@ -46,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
                     .and_then(|p| p.get("arguments"))
                     .cloned()
                     .unwrap_or_default();
-                match dispatch(store.clone(), ToolCall { name, arguments }).await {
+                match dispatch((), ToolCall { name, arguments }).await {
                     Ok(v) => serde_json::json!({
                         "content": [ { "type": "text", "text": serde_json::to_string_pretty(&v).unwrap_or_default() } ]
                     }),
