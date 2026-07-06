@@ -34,8 +34,14 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
 
     Ok(match call.name.as_str() {
         "list_todos" => {
+            // agent 인수가 있으면 ?agent= 필터로 해당 에이전트의 할 일만 조회
+            let url = if !agent.is_empty() && agent != "unknown" {
+                format!("{API_BASE}/todos?agent={agent}")
+            } else {
+                format!("{API_BASE}/todos")
+            };
             let r = client
-                .get(format!("{API_BASE}/todos"))
+                .get(&url)
                 .header("X-Agent", &agent)
                 .send().await?
                 .json::<Value>().await?;
