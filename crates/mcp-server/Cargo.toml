@@ -1,0 +1,23 @@
+[package]
+name = "mcp-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+todo_core = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+
+[lib]
+name = "mcp_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mcp-server"
+path = "src/main.rs"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "test-util"] }

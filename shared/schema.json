@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TodoDoc",
+  "type": "object",
+  "required": ["version", "updated_at", "updated_by", "todos"],
+  "properties": {
+    "version": { "const": "1.0" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "updated_by": { "type": "string" },
+    "todos": { "type": "array", "items": { "$ref": "#/$defs/Todo" } }
+  },
+  "$defs": {
+    "Todo": {
+      "type": "object",
+      "required": ["id", "title", "done", "priority", "created_at", "created_by", "history"],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "note": { "type": ["string", "null"] },
+        "done": { "type": "boolean" },
+        "priority": { "enum": ["high", "medium", "low"] },
+        "due_date": { "type": ["string", "null"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "created_at": { "type": "string", "format": "date-time" },
+        "created_by": { "type": "string" },
+        "completed_at": { "type": ["string", "null"] },
+        "completed_by": { "type": ["string", "null"] },
+        "updated_at": { "type": ["string", "null"] },
+        "updated_by": { "type": ["string", "null"] },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["action", "at", "by"],
+            "properties": {
+              "action": { "enum": ["created", "updated", "checked", "unchecked", "deleted"] },
+              "at": { "type": "string", "format": "date-time" },
+              "by": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

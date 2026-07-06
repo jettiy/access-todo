@@ -1,0 +1,19 @@
+[package]
+name = "api-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+todo_core = { workspace = true }
+axum = "0.7"
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tower = "0.5"
+anyhow = "1"
+http = "1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "test-util"] }
+tower = { version = "0.5", features = ["util"] }
