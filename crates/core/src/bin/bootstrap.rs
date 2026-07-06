@@ -21,7 +21,10 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let resp = reqwest::Client::new()
+    let http = reqwest::Client::builder()
+        .user_agent("desktop-todo-agents/0.1 (https://github.com/jettiy)")
+        .build()?;
+    let resp = http
         .post("https://api.github.com/gists")
         .bearer_auth(&token)
         .header("Accept", "application/vnd.github+json")

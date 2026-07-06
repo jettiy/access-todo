@@ -20,3 +20,6 @@ android/**/*.iml
 # 임시 파일
 *.log
 /tmp/
+# 민감 정보 (Gist 토큰 등)
+.env
+.env.local

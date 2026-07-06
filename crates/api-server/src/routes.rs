@@ -63,8 +63,20 @@ pub fn router(state: AppState) -> Router {
         .route("/todos/search", get(search))
         .route("/todos/:id", get(one).patch(update).delete(remove))
         .route("/todos/:id/toggle", post(toggle))
+        .route("/sync", post(sync_handler))
         .route("/health", get(|| async { "ok" }))
         .with_state(state)
+}
+
+/// Manually trigger a Gist pull (GET remote → merge → local).
+async fn sync_handler(State(s): State<AppState>) -> Json<serde_json::Value> {
+    match s.pull("sync-endpoint").await {
+        Ok(()) => {
+            let st = s.store.lock().await;
+            Json(serde_json::json!({ "ok": true, "count": st.list().len() }))
+        }
+        Err(e) => Json(serde_json::json!({ "ok": false, "error": e })),
+    }
 }
 
 async fn list(
@@ -111,17 +123,21 @@ async fn add(
     Json(b): Json<NewTodo>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let actor = agent_from_headers(&h);
-    let mut st = s.store.lock().await;
-    let t = st.add(
-        TodoInput {
-            title: b.title,
-            note: b.note,
-            priority: parse_prio(b.priority.unwrap_or_default()),
-            due_date: b.due_date,
-            tags: b.tags.unwrap_or_default(),
-        },
-        &actor,
-    );
+    let t = {
+        let mut st = s.store.lock().await;
+        st.add(
+            TodoInput {
+                title: b.title,
+                note: b.note,
+                priority: parse_prio(b.priority.unwrap_or_default()),
+                due_date: b.due_date,
+                tags: b.tags.unwrap_or_default(),
+            },
+            &actor,
+        )
+    };
+    // Best-effort push to Gist (ignore network errors).
+    if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
     Ok(Json(serde_json::to_value(t).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
 }
 
@@ -132,16 +148,22 @@ async fn update(
     Json(b): Json<PatchTodo>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let actor = agent_from_headers(&h);
-    let mut st = s.store.lock().await;
-    let patch = TodoPatch {
-        title: b.title,
-        note: b.note,
-        priority: b.priority.map(parse_prio),
-        due_date: b.due_date,
-        tags: b.tags,
+    let result = {
+        let mut st = s.store.lock().await;
+        let patch = TodoPatch {
+            title: b.title,
+            note: b.note,
+            priority: b.priority.map(parse_prio),
+            due_date: b.due_date,
+            tags: b.tags,
+        };
+        st.update(&id, patch, &actor)
     };
-    match st.update(&id, patch, &actor) {
-        Ok(t) => Ok(Json(serde_json::to_value(t).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)),
+    match result {
+        Ok(t) => {
+            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            Ok(Json(serde_json::to_value(t).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+        }
         Err(_) => Err(StatusCode::NOT_FOUND),
     }
 }
@@ -152,9 +174,15 @@ async fn toggle(
     h: HeaderMap,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let actor = agent_from_headers(&h);
-    let mut st = s.store.lock().await;
-    match st.toggle(&id, &actor) {
-        Ok(t) => Ok(Json(serde_json::to_value(t).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)),
+    let result = {
+        let mut st = s.store.lock().await;
+        st.toggle(&id, &actor)
+    };
+    match result {
+        Ok(t) => {
+            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            Ok(Json(serde_json::to_value(t).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+        }
         Err(_) => Err(StatusCode::NOT_FOUND),
     }
 }
@@ -165,9 +193,15 @@ async fn remove(
     h: HeaderMap,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let actor = agent_from_headers(&h);
-    let mut st = s.store.lock().await;
-    match st.delete(&id, &actor) {
-        Ok(()) => Ok(Json(serde_json::json!({ "deleted": id }))),
+    let result = {
+        let mut st = s.store.lock().await;
+        st.delete(&id, &actor)
+    };
+    match result {
+        Ok(()) => {
+            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            Ok(Json(serde_json::json!({ "deleted": id })))
+        }
         Err(_) => Err(StatusCode::NOT_FOUND),
     }
 }

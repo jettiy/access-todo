@@ -37,10 +37,15 @@ impl GistClient {
 
     /// Create a client with a custom API base (used for tests).
     pub fn with_base(token: String, base: String) -> Self {
+        // GitHub API requires a User-Agent header on all requests.
+        let http = reqwest::Client::builder()
+            .user_agent("desktop-todo-agents/0.1 (https://github.com/jettiy)")
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
         Self {
             token,
             base,
-            http: reqwest::Client::new(),
+            http,
         }
     }
 
