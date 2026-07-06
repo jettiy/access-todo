@@ -47,9 +47,11 @@ impl Store {
         self.todos.clone()
     }
 
-    /// Return todos due today and not yet done.
+    /// Return todos due today (local timezone) and not yet done.
+    /// `due_date` is a user-facing YYYY-MM-DD string interpreted in the
+    /// machine's local timezone, so we compare against the local date.
     pub fn list_today(&self) -> Vec<Todo> {
-        let today = Utc::now().date_naive().format("%Y-%m-%d").to_string();
+        let today = chrono::Local::now().date_naive().format("%Y-%m-%d").to_string();
         self.todos
             .iter()
             .filter(|t| t.due_date.as_deref() == Some(&today) && !t.done)

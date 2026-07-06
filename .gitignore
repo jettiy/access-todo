@@ -1,6 +1,22 @@
 .playwright-mcp/
+# 이미지 (스크린샷 등)
 *.png
 *.jpg
 *.jpeg
-node_modules/
+# Rust
 target/
+# Node / Tauri
+node_modules/
+apps/desktop/dist/
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/**/*.iml
+.cxx/
+# 임시 파일
+*.log
+/tmp/

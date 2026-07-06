@@ -95,7 +95,7 @@ fn search_matches_title_note_and_tag() {
 #[test]
 fn list_today_filters_unmatched() {
     let mut s = Store::new();
-    let today = chrono::Utc::now().date_naive().format("%Y-%m-%d").to_string();
+    let today = chrono::Local::now().date_naive().format("%Y-%m-%d").to_string();
     s.add(
         TodoInput {
             title: "today item".into(),
