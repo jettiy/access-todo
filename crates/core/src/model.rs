@@ -31,6 +31,20 @@ pub struct HistoryEntry {
     pub by: String,
 }
 
+/// A user-defined category for grouping todos within an agent's post-it.
+/// Each category belongs to one agent and has a stable id so rename is O(1).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Category {
+    pub id: String,
+    /// Owning agent name (hermes/omp/zcode/user).
+    pub agent: String,
+    pub name: String,
+    /// Display order within the agent (lower = first).
+    pub order: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
 /// A single todo item.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Todo {
@@ -44,6 +58,8 @@ pub struct Todo {
     pub due_date: Option<String>,
     #[serde(default)]
     pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub category_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub created_by: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -64,7 +80,10 @@ pub struct TodoDoc {
     pub version: String,
     pub updated_at: DateTime<Utc>,
     pub updated_by: String,
+    #[serde(default)]
     pub todos: Vec<Todo>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub categories: Vec<Category>,
 }
 
 impl TodoDoc {
@@ -75,6 +94,7 @@ impl TodoDoc {
             updated_at: Utc::now(),
             updated_by: actor.into(),
             todos: vec![],
+            categories: vec![],
         }
     }
 }
@@ -82,4 +102,9 @@ impl TodoDoc {
 /// Generate a fresh UUID v4 string for a new todo.
 pub fn new_id() -> String {
     Uuid::new_v4().to_string()
+}
+
+/// Generate a category id (prefixed for readability in the JSON).
+pub fn new_cat_id() -> String {
+    format!("cat-{}", Uuid::new_v4())
 }

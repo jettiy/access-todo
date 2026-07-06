@@ -30,6 +30,13 @@ export const AGENT_META: Record<string, { emoji: string; title: string; bg: stri
 
 export type Priority = "high" | "medium" | "low";
 
+export interface Category {
+  id: string;
+  agent: string;
+  name: string;
+  order: number;
+}
+
 export interface Todo {
   id: string;
   title: string;
@@ -38,6 +45,7 @@ export interface Todo {
   priority: Priority;
   due_date?: string | null;
   tags: string[];
+  category_id?: string | null;
   created_at: string;
   created_by: string;
   completed_at?: string | null;
@@ -56,13 +64,20 @@ async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  // 자기 에이전트의 할 일만 조회
-  list: () => req<{ todos: Todo[] }>(`/todos?agent=${AGENT}`),
+  // 자기 에이전트의 할 일 + 카테고리 조회
+  list: () => req<{ todos: Todo[]; categories: Category[] }>(`/todos?agent=${AGENT}`),
   today: () => req<{ todos: Todo[] }>(`/todos/today`),
   add: (title: string, note?: string, priority: Priority = "medium", due_date?: string) =>
     req<Todo>("/todos", { method: "POST", body: JSON.stringify({ title, note, priority, due_date }) }),
-  addRaw: (title: string, note?: string, priority: Priority = "medium", due_date?: string, tags?: string[]) =>
-    req<Todo>("/todos", { method: "POST", body: JSON.stringify({ title, note, priority, due_date, tags }) }),
+  addRaw: (title: string, note?: string, priority: Priority = "medium", due_date?: string, tags?: string[], category_id?: string) =>
+    req<Todo>("/todos", { method: "POST", body: JSON.stringify({ title, note, priority, due_date, tags, category_id }) }),
   toggle: (id: string) => req<Todo>(`/todos/${id}/toggle`, { method: "POST" }),
   del: (id: string) => req<{ deleted: string }>(`/todos/${id}`, { method: "DELETE" }),
+  // 카테고리
+  addCategory: (name: string) =>
+    req<Category>("/categories", { method: "POST", body: JSON.stringify({ agent: AGENT, name }) }),
+  renameCategory: (id: string, name: string) =>
+    req<Category>(`/categories/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }),
+  reorderCategories: (orderedIds: string[]) =>
+    req<{ ok: boolean }>("/categories/reorder", { method: "POST", body: JSON.stringify({ agent: AGENT, ordered_ids: orderedIds }) }),
 };

@@ -75,6 +75,9 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
             if let Some(tags) = call.arguments.get("tags") {
                 body["tags"] = tags.clone();
             }
+            if let Some(cat_id) = call.arguments.get("category_id").and_then(|v| v.as_str()) {
+                body["category_id"] = Value::String(cat_id.into());
+            }
             let r = client
                 .post(format!("{API_BASE}/todos"))
                 .header("X-Agent", &agent)
@@ -182,6 +185,7 @@ pub fn tool_catalog() -> Vec<Value> {
                     "priority": { "type": "string", "enum": ["high", "medium", "low"], "description": "우선순위" },
                     "due_date": { "type": "string", "description": "마감일 YYYY-MM-DD (선택)" },
                     "tags": { "type": "array", "items": { "type": "string" }, "description": "태그. 예: [\"agent:zcode\"]" },
+                    "category_id": { "type": "string", "description": "카테고리 ID (선택). list_todos 응답의 categories에서 확인" },
                     "agent": { "type": "string", "description": "에이전트 이름 (예: zcode, hermes, claude)" }
                 }
             }

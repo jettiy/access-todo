@@ -21,6 +21,7 @@ pub struct NewTodo {
     pub priority: Option<String>,
     pub due_date: Option<String>,
     pub tags: Option<Vec<String>>,
+    pub category_id: Option<String>,
 }
 
 #[derive(Deserialize, Default)]
@@ -46,6 +47,26 @@ pub struct SearchQ {
 #[derive(Deserialize)]
 pub struct CompleteBody {
     pub summary: Option<String>,
+}
+
+/// Body for POST /categories
+#[derive(Deserialize)]
+pub struct NewCategory {
+    pub agent: String,
+    pub name: String,
+}
+
+/// Body for PATCH /categories/:id
+#[derive(Deserialize)]
+pub struct RenameCategory {
+    pub name: String,
+}
+
+/// Body for POST /categories/reorder
+#[derive(Deserialize)]
+pub struct ReorderCategories {
+    pub agent: String,
+    pub ordered_ids: Vec<String>,
 }
 
 #[derive(Deserialize, Default)]
@@ -78,10 +99,69 @@ pub fn router(state: AppState) -> Router {
         .route("/todos/:id", get(one).patch(update).delete(remove))
         .route("/todos/:id/toggle", post(toggle))
         .route("/todos/:id/complete", post(complete))
+        .route("/categories", post(create_category))
+        .route("/categories/reorder", post(reorder_category))
+        .route("/categories/:id", axum::routing::patch(rename_category))
         .route("/sync", post(sync_handler))
         .route("/health", get(|| async { "ok" }))
         .layer(cors)
         .with_state(state)
+}
+
+/// POST /categories — create a category for an agent
+async fn create_category(
+    State(s): State<AppState>,
+    h: HeaderMap,
+    Json(b): Json<NewCategory>,
+) -> Json<serde_json::Value> {
+    let _actor = agent_from_headers(&h);
+    let cat = {
+        let mut st = s.store.lock().await;
+        st.add_category(&b.agent, &b.name)
+    };
+    if let Err(e) = s.push(&_actor).await { eprintln!("warn: gist push failed: {e}"); }
+    Json(serde_json::to_value(cat).unwrap_or(serde_json::Value::Null))
+}
+
+/// PATCH /categories/:id — rename a category
+async fn rename_category(
+    State(s): State<AppState>,
+    Path(id): Path<String>,
+    h: HeaderMap,
+    Json(b): Json<RenameCategory>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let actor = agent_from_headers(&h);
+    let result = {
+        let mut st = s.store.lock().await;
+        st.rename_category(&id, &b.name)
+    };
+    match result {
+        Ok(c) => {
+            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            Ok(Json(serde_json::to_value(c).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+        }
+        Err(_) => Err(StatusCode::NOT_FOUND),
+    }
+}
+
+/// POST /categories/reorder — reorder categories for an agent
+async fn reorder_category(
+    State(s): State<AppState>,
+    h: HeaderMap,
+    Json(b): Json<ReorderCategories>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let actor = agent_from_headers(&h);
+    let result = {
+        let mut st = s.store.lock().await;
+        st.reorder_categories(&b.agent, &b.ordered_ids)
+    };
+    match result {
+        Ok(()) => {
+            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            Ok(Json(serde_json::json!({ "ok": true })))
+        }
+        Err(_) => Err(StatusCode::NOT_FOUND),
+    }
 }
 
 /// Manually trigger a Gist pull (GET remote → merge → local).
@@ -111,7 +191,13 @@ async fn list(
         let tag = format!("agent:{agent}");
         todos.retain(|t| t.tags.iter().any(|x| x == &tag) || t.created_by == *agent);
     }
-    Json(serde_json::json!({ "todos": todos }))
+    // 해당 에이전트의 카테고리도 함께 반환
+    let categories = if let Some(agent) = &q.agent {
+        st.list_categories(agent)
+    } else {
+        vec![]
+    };
+    Json(serde_json::json!({ "todos": todos, "categories": categories }))
 }
 
 async fn today(State(s): State<AppState>, h: HeaderMap) -> Json<serde_json::Value> {
@@ -153,6 +239,7 @@ async fn add(
                 priority: parse_prio(b.priority.unwrap_or_default()),
                 due_date: b.due_date,
                 tags: b.tags.unwrap_or_default(),
+                category_id: b.category_id,
             },
             &actor,
         )

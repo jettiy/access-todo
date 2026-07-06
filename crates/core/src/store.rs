@@ -7,7 +7,7 @@
 use chrono::Utc;
 
 use crate::error::{CoreError, Result};
-use crate::model::{new_id, HistoryEntry, Priority, Todo, TodoDoc};
+use crate::model::{new_cat_id, new_id, Category, HistoryEntry, Priority, Todo, TodoDoc};
 
 /// Input for creating a new todo.
 #[derive(Debug, Clone, Default)]
@@ -17,6 +17,7 @@ pub struct TodoInput {
     pub priority: Priority,
     pub due_date: Option<String>,
     pub tags: Vec<String>,
+    pub category_id: Option<String>,
 }
 
 /// Partial update for a todo. `None` means "leave unchanged"; for the
@@ -30,10 +31,11 @@ pub struct TodoPatch {
     pub tags: Option<Vec<String>>,
 }
 
-/// In-memory store of todos. Cloneable so servers can snapshot safely.
+/// In-memory store of todos and categories. Cloneable so servers can snapshot safely.
 #[derive(Debug, Clone, Default)]
 pub struct Store {
     todos: Vec<Todo>,
+    categories: Vec<Category>,
 }
 
 impl Store {
@@ -75,6 +77,7 @@ impl Store {
             priority: i.priority,
             due_date: i.due_date,
             tags: i.tags,
+            category_id: i.category_id,
             created_at: now,
             created_by: actor.into(),
             completed_at: None,
@@ -89,6 +92,57 @@ impl Store {
         };
         self.todos.push(todo.clone());
         todo
+    }
+
+    // ── Category CRUD ──
+
+    /// Create a new category for an agent. Returns the created category.
+    pub fn add_category(&mut self, agent: &str, name: &str) -> Category {
+        let order = self.categories.iter()
+            .filter(|c| c.agent == agent)
+            .count() as i32;
+        let cat = Category {
+            id: new_cat_id(),
+            agent: agent.into(),
+            name: name.into(),
+            order,
+            updated_at: Some(Utc::now()),
+        };
+        self.categories.push(cat.clone());
+        cat
+    }
+
+    /// Rename a category by id (O(1), no todo changes needed).
+    pub fn rename_category(&mut self, id: &str, name: &str) -> Result<Category> {
+        let c = self.categories.iter_mut()
+            .find(|c| c.id == id)
+            .ok_or_else(|| CoreError::NotFound(format!("category {id}")))?;
+        c.name = name.into();
+        c.updated_at = Some(Utc::now());
+        Ok(c.clone())
+    }
+
+    /// Reorder categories for an agent. `ordered_ids` is the desired order.
+    pub fn reorder_categories(&mut self, agent: &str, ordered_ids: &[String]) -> Result<()> {
+        let now = Utc::now();
+        for (i, id) in ordered_ids.iter().enumerate() {
+            let c = self.categories.iter_mut()
+                .find(|c| c.id == *id && c.agent == agent)
+                .ok_or_else(|| CoreError::NotFound(format!("category {id}")))?;
+            c.order = i as i32;
+            c.updated_at = Some(now);
+        }
+        Ok(())
+    }
+
+    /// List categories for an agent, ordered by `order` field.
+    pub fn list_categories(&self, agent: &str) -> Vec<Category> {
+        let mut cats: Vec<Category> = self.categories.iter()
+            .filter(|c| c.agent == agent)
+            .cloned()
+            .collect();
+        cats.sort_by_key(|c| c.order);
+        cats
     }
 
     /// Apply a partial update to a todo. Records `updated` history entry.
@@ -221,6 +275,7 @@ impl Store {
             updated_at: Utc::now(),
             updated_by: actor.into(),
             todos: self.todos,
+            categories: self.categories,
         }
     }
 
@@ -228,6 +283,7 @@ impl Store {
     pub fn from_doc(doc: TodoDoc) -> Self {
         Self {
             todos: doc.todos,
+            categories: doc.categories,
         }
     }
 }

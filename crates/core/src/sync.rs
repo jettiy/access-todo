@@ -33,13 +33,9 @@ impl SyncEngine {
         let etag_lock = self.etag.lock().await.clone();
         let (remote, new_etag) = self.client.fetch(&self.gist_id, etag_lock.as_deref()).await?;
 
-        let local_todos = local.clone().list();
-        let local_doc = TodoDoc {
-            version: "1.0".into(),
-            updated_at: remote.updated_at,
-            updated_by: "local".into(),
-            todos: local_todos,
-        };
+        // Build a local snapshot doc for merging. We use a temporary store
+        // snapshot via clone+into_doc to carry both todos and categories.
+        let local_doc = local.clone().into_doc("local");
         let merged = merge(&local_doc, &remote);
         *local = Store::from_doc(merged.clone());
         *self.etag.lock().await = new_etag;

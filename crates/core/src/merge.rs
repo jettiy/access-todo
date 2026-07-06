@@ -1,4 +1,4 @@
-//! 3-way merge of two `TodoDoc`s by todo id.
+//! 3-way merge of two `TodoDoc`s by todo id and category id.
 //!
 //! Used by the sync engine to reconcile local and remote Gist state.
 //! Conflict resolution: same id, latest `updated_at` (or `created_at`
@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 
-use crate::model::{Todo, TodoDoc};
+use crate::model::{Category, Todo, TodoDoc};
 
 /// Effective change timestamp for a todo: `updated_at` if set, else
 /// `created_at`, else the Unix epoch (oldest possible).
@@ -17,11 +17,17 @@ fn ts(t: &Todo) -> DateTime<Utc> {
     t.updated_at.or(Some(t.created_at)).unwrap_or(DateTime::UNIX_EPOCH)
 }
 
+/// Effective change timestamp for a category: `updated_at` if set, else epoch.
+fn cat_ts(c: &Category) -> DateTime<Utc> {
+    c.updated_at.unwrap_or(DateTime::UNIX_EPOCH)
+}
+
 /// Merge two documents into a fresh document.
 ///
 /// The merged document's `updated_by` is `"merge"` and `updated_at` is now;
 /// clients should overwrite these when persisting.
 pub fn merge(local: &TodoDoc, remote: &TodoDoc) -> TodoDoc {
+    // Merge todos by id (latest updated_at wins, union of disjoint ids).
     let mut map: HashMap<String, Todo> = HashMap::new();
     for t in &local.todos {
         map.insert(t.id.clone(), t.clone());
@@ -40,10 +46,32 @@ pub fn merge(local: &TodoDoc, remote: &TodoDoc) -> TodoDoc {
     }
     let mut todos: Vec<Todo> = map.into_values().collect();
     todos.sort_by(|a, b| a.id.cmp(&b.id));
+
+    // Merge categories by id (latest updated_at wins, union of disjoint ids).
+    let mut cmap: HashMap<String, Category> = HashMap::new();
+    for c in &local.categories {
+        cmap.insert(c.id.clone(), c.clone());
+    }
+    for c in &remote.categories {
+        match cmap.get(&c.id) {
+            Some(existing) => {
+                if cat_ts(c) >= cat_ts(existing) {
+                    cmap.insert(c.id.clone(), c.clone());
+                }
+            }
+            None => {
+                cmap.insert(c.id.clone(), c.clone());
+            }
+        }
+    }
+    let mut categories: Vec<Category> = cmap.into_values().collect();
+    categories.sort_by(|a, b| a.id.cmp(&b.id));
+
     TodoDoc {
         version: "1.0".into(),
         updated_at: Utc::now(),
         updated_by: "merge".into(),
         todos,
+        categories,
     }
 }
