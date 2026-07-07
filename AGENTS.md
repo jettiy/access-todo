@@ -1,184 +1,177 @@
 # AGENTS.md — Access 에이전트 연동 가이드
 
-> 이 파일은 모든 AI 에이전트(ZCode, OMP, Hermes, Claude Code)가
-> Access TODO 시스템과 연동하는 방법을 설명합니다.
-> 에이전트는 이 파일을 읽고 자동으로 연동 규칙을 이해해야 합니다.
+> **Access는 "에이전트 정리 가이드 시스템"입니다.**
+> 에이전트는 자유롭게 작업하지만, 세션 시작/종료 시 점검하고 정리하여
+> **사용자에게 "뭘 했고, 뭘 해야 하는지"를 깔끔하게 알려주는 역할**을 합니다.
 
-## Access란?
+---
 
-Access는 **"에이전트 정리 가이드 시스템"**입니다.
+## 🔴 Access 핵심 원칙
 
-에이전트들은 자유롭게 코드를 작성하고, 파일을 수정하고, 실험할 수 있습니다.
-하지만 그 과정에서 **무엇을 했는지, 어디까지 했는지, 다음에 뭘 해야 하는지**를
-스스로 점검하고 Access에 정리하는 것이 핵심입니다.
-
-### 🔴 Access 핵심 원칙 (정리 규격)
-
-**모든 에이전트는 세션 시작/종료 시 다음을 수행해야 합니다:**
+### 에이전트의 3가지 책임
 
 #### 1. 세션 시작 시: 점검
 ```
-① list_todos(agent="<본인>") 로 현재 할 일 확인
-② 완료된 항목(complete_todo summary) 검토 — 이전 세션에서 무엇을 했는지 파악
-③ 미완료 항목 우선순위 확인 — 오늘 뭘 해야 하는지 파악
-④ 새로 발견한 작업이 있으면 add_todo로 등록
+① access_review(agent="<본인>") 호출 → 이전 진행상황 파악
+② list_todos(agent="<본인>") → 현재 할 일 확인
+③ 완료된 요약 검토 → 이전 세션에서 무엇을 했는지 파악
+④ 미완료 high 우선순위 → 오늘 뭘 해야 하는지 파악
 ```
 
 #### 2. 작업 중: 기록
 ```
-① 각 작업을 완료할 때마다 complete_todo(id, summary="무엇을 했는지 구체적으로")
-② 새 버그/기능 발견 시 add_todo로 즉시 등록
-③ 다른 에이전트에게 넘겨야 할 작업은 tags=["agent:<상대에이전트>"]로 지정
+① 작업 완료 시 → complete_todo(id, summary="구체적 요약", agent="<본인>")
+② 새 버그/기능 발견 → add_todo로 등록
+③ 사용자가 해야 할 일 → add_todo(agent="user", tags=["agent:user"])
 ```
 
-#### 3. 세션 종료 시: 정리 요약
+#### 3. 세션 종료 시: 정리
 ```
-① access_review 호출 — 전체 진행상황 요약 생성
-② 남은 할 일의 우선순위 재조정
-③ 사용자에게 "어디까지 했고, 앞으로 뭘 해야 하는지" 보고
-```
-
-### 왜 이 규격이 필요한가?
-
-에이전트가 아무거나 자유롭게 할 수 있지만, **정리하지 않으면**:
-- 다른 에이전트가 무엇이 진행 중인지 모름 → 중복 작업, 충돌
-- 사용자가 진행 상황을 파악할 수 없음 → 혼란
-- 세션이 바뀌면 맥락이 사라짐 → 처음부터 다시 파악
-
-Access는 이 **"정리 계층"**을 담당합니다.
-
-## 연결 방식
-
-| 에이전트 | 방식 | 설정 파일 |
-|---------|------|---------|
-| ZCode | MCP | `~/.zcode/cli/config.json` → `mcp.servers.access-todo` |
-| Claude Code | MCP | 동일 config |
-| OMP | MCP | `~/.omp/agent/mcp.json` → `mcpServers.access-todo` |
-| Hermes | REST (curl) | skill: `skills/access-todo/SKILL.md` |
-
-**API 서버**: `http://127.0.0.1:7878` (Access시작.bat 실행 시 자동 시작)
-
-## 🔴 핵심 규칙: 작업 완료 시 요약과 함께 체크
-
-### 1단계: 변경사항 분석
-```
-- git diff 또는 변경된 파일 목록 확인
-- 핵심 변경사항을 1-2문장으로 요약
+① access_review 호출 → 전체 진행상황 종합 요약
+② 남은 할 일 우선순위 재조정
+③ 사용자에게 보고: "여기까지 했고, 다음은 이걸 해야 합니다"
 ```
 
-### 2단계: complete_todo 호출 (toggle_todo가 아님!)
+---
+
+## 📝 할 일 작성 규칙 (에이전트용)
+
+### 제목 작성
+| ✅ 좋은 예 | ❌ 나쁜 예 | 이유 |
+|-----------|----------|------|
+| `K-STONKS: job_select.lua nil 버그 수정` | `버그 수정` | 프로젝트+구체 내용 |
+| `DNF 가이드: 시즌5 페이지 SEO 점검` | `작업하기` | 무슨 작업인지 명시 |
+| `백엔드: /rules 엔드포인트 구현` | `코드` | 너무 짧음 |
+
+### complete_todo summary 작성
+summary에는 **무엇을 변경했는지 구체적으로** 작성:
 ```
-complete_todo(id="<할일id>", summary="<작업 요약>", agent="<본인>")
-```
-
-**summary 작성 요령:**
-- ✅ `job_select.lua 51줄 nil 체크 추가, main.lua 1867줄 H 초기화`
-- ✅ `백엔드 시그널 룰 엔진 POST /rules 구현, 테스트 3개 추가`
-- ❌ `작업 완료` (모호)
-- ❌ `코드 수정함` (불명확)
-
-### 3단계: 사용자 알림
-```
-"✓ '<할일제목>' 완료: <요약>"
-```
-
-## MCP 도구 (9개)
-
-| 도구 | 설명 | 필수 인수 |
-|------|------|---------|
-| `list_todos` | 에이전트별 할 일 + 카테고리 | `agent` |
-| `get_today_todos` | 오늘 할 일 | - |
-| `add_todo` | 할 일 추가 | `title`, `agent`, `tags` |
-| `complete_todo` | 체크 + 요약 ★ | `id`, `summary`, `agent` |
-| `toggle_todo` | 단순 체크 (요약 없음) | `id`, `agent` |
-| `update_todo` | 할 일 수정 | `id` |
-| `delete_todo` | 삭제 | `id` |
-| `search_todos` | 검색 | `q` |
-
-## REST API (Hermes용)
-
-모든 요청에 `X-Agent: <에이전트이름>` 헤더 필수.
-
-```
-GET    /todos?agent=<이름>          할 일 + 카테고리
-POST   /todos                       추가 {title, priority, tags, category_id}
-PATCH  /todos/:id                   수정
-POST   /todos/:id/toggle            체크
-POST   /todos/:id/complete          완료+요약 {summary}
-DELETE /todos/:id                   삭제
-GET    /todos/search?q=             검색
-
-POST   /categories                  카테고리 생성 {agent, name}
-PATCH  /categories/:id              이름 변경 {name}
-DELETE /categories/:id              삭제
-POST   /categories/reorder          순서 변경 {agent, ordered_ids}
+✅ "main.lua 1867줄 H 변수 nil 체크 추가, job_select.lua 51줄 jc 초기화"
+✅ "POST /rules 엔드포인트 구현, 3개 테스트 추가, auth.py에 권한 검증 추가"
+❌ "작업 완료" (모호)
+❌ "고침" (불명확)
 ```
 
-## 카테고리
+### 우선순위 기준
+| 우선순위 | 기준 | 예시 |
+|---------|------|------|
+| 🔴 high | 긴급 버그, 서비스 중단, 보안 이슈 | 크래시, 인증 실패, 데이터 손실 |
+| 🟡 medium | 기능 개발, 일반 버그, 개선 | 새 페이지, UI 수정, 리팩터링 |
+| 🟢 low | 문서, 정리, 선택적 개선 | README 업데이트, 주석 추가 |
 
-할 일의 `tags`에 `agent:<이름>`을 넣으면 해당 에이전트 포스트잇에 표시.
-`category_id`로 카테고리 지정 (선택, 없으면 미분류).
+---
 
-## "내 할 일" 자동화
+## 👤 사용자에게 일 위임하기 (중요)
 
-`user` 에이전트 창은 사용자 본인의 할 일입니다.
-에이전트가 사용자를 위해 할 일을 추가할 때:
+에이전트가 **사용자가 직접 해야 하는 작업**을 발견하면, `user` 포스트잇에 등록합니다.
+
+### 위임이 필요한 경우
+- **수동 승인이 필요한 작업** (배포, 결제, 계정 설정)
+- **물리적 작업** (장보기, 회의 참석)
+- **에이전트가 권한/능력 밖인 작업** (법적 검토, 외부 커뮤니케이션)
+- **사용자의 결정이 필요한 작업** (디자인 선택, 우선순위 결정)
+
+### 위임 방법
 ```
-add_todo(title="...", agent="user", tags=["agent:user"], category_id="...")
-```
-
-## 🆕 프로젝트 온보딩 (자동 할 일 등록)
-
-새 프로젝트를 만나면 다음 절차를 따르세요:
-
-### 1단계: rules.json 확인
-프로젝트 루트의 `.access/rules.json`을 읽습니다. 없으면 README의 TODO 섹션이나 `TODO:`/`FIXME:` 주석을 스캔합니다.
-
-### 2단계: 카테고리 생성
-```
-create_category(agent="zcode", name="버그 수정")
-create_category(agent="zcode", name="기능 개발")
-```
-
-### 3단계: 할 일 일괄 등록
-```
-add_todos_batch(agent="zcode", todos=[
-  {title: "nil 버그 수정", priority: "high", category_id: "<id>"},
-  {title: "차트 기능 추가", priority: "medium", category_id: "<id>"}
-])
+add_todo(
+  title="결제: AWS 크레딧 충전 필요",
+  note="이번 달 한도 초과 예정, $50 충전",
+  priority="high",
+  tags=["agent:user"],
+  category_id="<사용자 카테고리>"
+)
 ```
 
-### 4단계: 알림
-"N개 카테고리, M개 할 일을 등록했습니다"라고 사용자에게 알림.
-
-### .access/rules.json 표준 포맷
-
-프로젝트 루트에 `.access/rules.json`을 두면 에이전트가 자동으로 읽습니다:
-
-```json
-{
-  "project": { "id": "k-stonks", "name": "K-STONKS-V2" },
-  "categories": ["버그 수정", "기능 개발"],
-  "starter_todos": [
-    {
-      "title": "nil 버그 수정",
-      "priority": "high",
-      "category": "버그 수정",
-      "note": "job_select.lua 51줄"
-    },
-    {
-      "title": "차트 기능 추가",
-      "priority": "medium",
-      "category": "기능 개발"
-    }
-  ]
-}
+### 위임 시 사용자에게 알림
+```
+"사용자님, Access '내 할 일'에 다음을 등록했습니다:
+ 🔴 결제: AWS 크레딧 충전 필요 ($50)
+ 확인 후 처리 부탁드립니다."
 ```
 
-에이전트가 이 파일을 읽고:
-1. `categories` 배열로 카테고리 생성
-2. `starter_todos`의 `category` 이름을 ID로 매핑
-3. `add_todos_batch`로 한 번에 등록
+---
+
+## 🔄 프로젝트 온보딩
+
+새 프로젝트를 만나면:
+
+### 1단계: `.access/rules.json` 확인
+프로젝트 루트의 `.access/rules.json`을 읽습니다. 없으면 README/TODO를 스캔합니다.
+
+### 2단계: 카테고리 + 할 일 등록
+```
+create_category(agent="<본인>", name="버그 수정")
+add_todos_batch(agent="<본인>", todos=[...])
+```
+
+### 3단계: 알림
+"N개 카테고리, M개 할 일을 Access에 등록했습니다."
+
+---
+
+## 🔧 MCP 도구 (13개)
+
+| 도구 | 설명 |
+|------|------|
+| `list_todos` | 에이전트별 할 일 + 카테고리 조회 |
+| `get_today_todos` | 오늘 할 일 |
+| `add_todo` | 할 일 추가 (category_id 선택) |
+| `add_todos_batch` | 여러 할 일 일괄 등록 (온보딩) |
+| `update_todo` | 할 일 수정 |
+| `toggle_todo` | 단순 체크 |
+| `complete_todo` | **체크 + 작업 요약 기록** ★ |
+| `delete_todo` | 할 일 삭제 |
+| `search_todos` | 키워드 검색 |
+| `create_category` | 카테고리 생성 |
+| `access_review` | **진행상황 종합 요약** ★ |
+
+모든 도구 호출 시 `agent` 인수로 본인 에이전트 이름 전달.
+
+---
+
+## 🔒 보안 규칙
+
+### 절대 하면 안 되는 것
+- ❌ GitHub Token을 코드/커밋/로그에 출력
+- ❌ `.access-secrets.cmd` 파일 내용을 사용자에게 표시
+- ❌ API 서버를 인터넷에 노출 (localhost 전용)
+- ❌ Gist를 public으로 변경
+
+### 에이전트가 토큰을 다루는 경우
+- 토큰은 환경 변수(`GITHUB_TOKEN`)로만 접근
+- 에이전트는 토큰 값을 절대 출력하거나 기록하지 않음
+- Gist 작업은 Access API 서버가 처리 (에이전트는 직접 Gist API 호출 안 함)
+
+### API 서버 보안
+- 기본 바인딩: `127.0.0.1` (localhost 전용)
+- WSL 접근 시에만 `0.0.0.0` (방화벽 규칙으로 WSL 서브넷만 허용)
+- 모든 변경은 Gist(비밀 Gist)에 저장, 외부에 노출되지 않음
+
+---
+
+## 📊 access_review로 진행상황 보고
+
+세션 종료 시 사용자에게 이렇게 보고합니다:
+
+```
+📊 진행상황 요약 (zcode)
+
+진행률: 11/19 (57%)
+완료: 11개 | 남음: 8개 (🔴2 🟡2 🟢4)
+
+최근 완료한 작업:
+  ✅ Tauri 4개 창 포스트잇 → 드래그/닫기/항상위/색상 구현
+  ✅ 카테고리 시스템 → ID 참조, rename/reorder, Gist 머지
+
+지금 해야 할 일 (긴급):
+  🔴 K-STONKS: job_select.lua nil 버그 수정
+  🔴 K-STONKS: main.lua H 크래시 수정
+
+사용자님께 요청:
+  🔴 결제: AWS 크레딧 충전 ($50) — '내 할 일'에 등록됨
+```
+
+---
 
 ## 자동 시작/종료
 

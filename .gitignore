@@ -23,3 +23,5 @@ android/**/*.iml
 # 민감 정보 (Gist 토큰 등)
 .env
 .env.local
+.access-secrets.cmd
+access-secrets*
