@@ -150,6 +150,43 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
                 .json::<Value>().await?;
             r
         }
+        "add_todos_batch" => {
+            // 여러 할 일을 한 번에 등록 (온보딩용).
+            let batch_agent = call.arguments["agent"]
+                .as_str()
+                .unwrap_or(&agent)
+                .to_string();
+            let todos = call.arguments["todos"]
+                .as_array()
+                .ok_or_else(|| anyhow::anyhow!("todos array required"))?;
+            let body = serde_json::json!({ "agent": batch_agent, "todos": todos });
+            let r = client
+                .post(format!("{API_BASE}/batch/todos"))
+                .header("X-Agent", &agent)
+                .header("Content-Type", "application/json")
+                .json(&body)
+                .send().await?
+                .json::<Value>().await?;
+            r
+        }
+        "create_category" => {
+            let cat_agent = call.arguments["agent"]
+                .as_str()
+                .unwrap_or(&agent)
+                .to_string();
+            let name = call.arguments["name"]
+                .as_str()
+                .ok_or_else(|| anyhow::anyhow!("name required"))?;
+            let body = serde_json::json!({ "agent": cat_agent, "name": name });
+            let r = client
+                .post(format!("{API_BASE}/categories"))
+                .header("X-Agent", &agent)
+                .header("Content-Type", "application/json")
+                .json(&body)
+                .send().await?
+                .json::<Value>().await?;
+            r
+        }
         other => anyhow::bail!("unknown tool: {other}"),
     })
 }
@@ -259,6 +296,43 @@ pub fn tool_catalog() -> Vec<Value> {
                 "properties": {
                     "q": { "type": "string", "description": "검색어" },
                     "agent": { "type": "string" }
+                }
+            }
+        }),
+        serde_json::json!({
+            "name": "add_todos_batch",
+            "description": "여러 할 일을 한 번에 등록합니다. 새 프로젝트 온보딩, .access/rules.json에서 읽은 할 일 일괄 등록에 사용.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["todos"],
+                "properties": {
+                    "agent": { "type": "string", "description": "등록할 에이전트 이름" },
+                    "todos": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": ["title"],
+                            "properties": {
+                                "title": { "type": "string" },
+                                "note": { "type": "string" },
+                                "priority": { "type": "string", "enum": ["high", "medium", "low"] },
+                                "category_id": { "type": "string" },
+                                "tags": { "type": "array", "items": { "type": "string" } }
+                            }
+                        }
+                    }
+                }
+            }
+        }),
+        serde_json::json!({
+            "name": "create_category",
+            "description": "에이전트에 새 카테고리를 생성합니다. 온보딩 시 프로젝트 구조에 맞춰 카테고리를 미리 만들 때 사용.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                    "name": { "type": "string", "description": "카테고리 이름" },
+                    "agent": { "type": "string", "description": "에이전트 이름" }
                 }
             }
         }),

@@ -89,6 +89,59 @@ POST   /categories/reorder          순서 변경 {agent, ordered_ids}
 add_todo(title="...", agent="user", tags=["agent:user"], category_id="...")
 ```
 
+## 🆕 프로젝트 온보딩 (자동 할 일 등록)
+
+새 프로젝트를 만나면 다음 절차를 따르세요:
+
+### 1단계: rules.json 확인
+프로젝트 루트의 `.access/rules.json`을 읽습니다. 없으면 README의 TODO 섹션이나 `TODO:`/`FIXME:` 주석을 스캔합니다.
+
+### 2단계: 카테고리 생성
+```
+create_category(agent="zcode", name="버그 수정")
+create_category(agent="zcode", name="기능 개발")
+```
+
+### 3단계: 할 일 일괄 등록
+```
+add_todos_batch(agent="zcode", todos=[
+  {title: "nil 버그 수정", priority: "high", category_id: "<id>"},
+  {title: "차트 기능 추가", priority: "medium", category_id: "<id>"}
+])
+```
+
+### 4단계: 알림
+"N개 카테고리, M개 할 일을 등록했습니다"라고 사용자에게 알림.
+
+### .access/rules.json 표준 포맷
+
+프로젝트 루트에 `.access/rules.json`을 두면 에이전트가 자동으로 읽습니다:
+
+```json
+{
+  "project": { "id": "k-stonks", "name": "K-STONKS-V2" },
+  "categories": ["버그 수정", "기능 개발"],
+  "starter_todos": [
+    {
+      "title": "nil 버그 수정",
+      "priority": "high",
+      "category": "버그 수정",
+      "note": "job_select.lua 51줄"
+    },
+    {
+      "title": "차트 기능 추가",
+      "priority": "medium",
+      "category": "기능 개발"
+    }
+  ]
+}
+```
+
+에이전트가 이 파일을 읽고:
+1. `categories` 배열로 카테고리 생성
+2. `starter_todos`의 `category` 이름을 ID로 매핑
+3. `add_todos_batch`로 한 번에 등록
+
 ## 자동 시작/종료
 
 - 에이전트 게이트웨이 시작 → Access 자동 시작 (wrapper 스크립트)

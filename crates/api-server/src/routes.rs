@@ -69,6 +69,23 @@ pub struct ReorderCategories {
     pub ordered_ids: Vec<String>,
 }
 
+/// A single item in POST /todos/batch
+#[derive(Deserialize)]
+pub struct BatchItem {
+    pub title: String,
+    pub note: Option<String>,
+    pub priority: Option<String>,
+    pub category_id: Option<String>,
+    pub tags: Option<Vec<String>>,
+}
+
+/// Body for POST /todos/batch — bulk-add todos for onboarding
+#[derive(Deserialize)]
+pub struct BatchTodos {
+    pub agent: String,
+    pub todos: Vec<BatchItem>,
+}
+
 #[derive(Deserialize, Default)]
 pub struct ListQ {
     #[serde(default)]
@@ -94,6 +111,7 @@ pub fn router(state: AppState) -> Router {
 
     Router::new()
         .route("/todos", get(list).post(add))
+        .route("/batch/todos", post(add_batch))
         .route("/todos/today", get(today))
         .route("/todos/search", get(search))
         .route("/todos/:id", get(one).patch(update).delete(remove))
@@ -182,6 +200,40 @@ async fn delete_category(
         }
         Err(_) => Err(StatusCode::NOT_FOUND),
     }
+}
+
+/// POST /todos/batch — bulk-add todos (onboarding). Tags get `agent:<name>` appended.
+async fn add_batch(
+    State(s): State<AppState>,
+    h: HeaderMap,
+    Json(b): Json<BatchTodos>,
+) -> Json<serde_json::Value> {
+    let actor = agent_from_headers(&h);
+    let agent_tag = format!("agent:{}", b.agent);
+    let mut ids: Vec<String> = vec![];
+    {
+        let mut st = s.store.lock().await;
+        for item in &b.todos {
+            let mut tags = item.tags.clone().unwrap_or_default();
+            if !tags.contains(&agent_tag) {
+                tags.push(agent_tag.clone());
+            }
+            let t = st.add(
+                TodoInput {
+                    title: item.title.clone(),
+                    note: item.note.clone(),
+                    priority: parse_prio(item.priority.clone().unwrap_or_default()),
+                    due_date: None,
+                    tags,
+                    category_id: item.category_id.clone(),
+                },
+                &b.agent,
+            );
+            ids.push(t.id);
+        }
+    }
+    if let Err(e) = s.push(&b.agent).await { eprintln!("warn: gist push failed: {e}"); }
+    Json(serde_json::json!({ "created": ids.len(), "ids": ids }))
 }
 
 /// Manually trigger a Gist pull (GET remote → merge → local).

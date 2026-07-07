@@ -19,6 +19,9 @@
   let collapsed = false;
   let onTop = true;
   let collapsedCats: Set<string> = new Set(); // 접힌 카테고리 id 집합
+  let firstLoad = true;
+  let flashIds: Set<string> = new Set(); // 새로 추가된 todo id (깜빡임용)
+  let newCount = 0; // 읽지 않은 새 항목 수
 
   const meta = AGENT_META[AGENT] || AGENT_META.user;
   const appWindow = getCurrentWindow();
@@ -27,13 +30,29 @@
   async function refresh() {
     try {
       const r = await api.list();
+      // 새로 추가된 항목 감지 (다른 에이전트가 추가한 것만)
+      if (!firstLoad) {
+        const oldIds = new Set(todos.map((t) => t.id));
+        const incoming = r.todos.filter((t) => !oldIds.has(t.id) && t.created_by !== AGENT && !t.done);
+        for (const t of incoming) {
+          flashIds.add(t.id);
+          setTimeout(() => { flashIds.delete(t.id); flashIds = flashIds; }, 4000);
+        }
+        if (incoming.length > 0) newCount += incoming.length;
+      }
+      firstLoad = false;
       todos = r.todos;
       categories = r.categories;
       synced = new Date().toLocaleTimeString("ko-KR");
       errorMsg = "";
+      flashIds = flashIds; // Svelte 반응성
     } catch (e) {
       errorMsg = `서버 연결 실패: ${(e as Error).message}`;
     }
+  }
+
+  function clearNewCount() {
+    newCount = 0;
   }
 
   async function add() {
@@ -135,7 +154,8 @@
 <main class:collapsed
   style="--bg:{meta.bg}; --bg-soft:{meta.bgSoft}; --border:{meta.border}; --text:{meta.text};">
   <header on:mousedown={titleMousedown}>
-    <span class="title" on:mousedown={titleMousedown}>{meta.emoji} {meta.title}</span>
+    <span class="title" on:mousedown={titleMousedown} on:click={clearNewCount}>{meta.emoji} {meta.title}</span>
+    {#if newCount > 0}<span class="badge-new" on:click={clearNewCount} title="새 할 일">🔴 {newCount}</span>{/if}
     <div class="window-controls" on:mousedown|stopPropagation>
       <button class="win-btn" on:click={toggleOnTop} title={onTop ? "항상 위 해제" : "항상 위 설정"} class:active={onTop}>📌</button>
       <button class="win-btn" on:click={toggleCollapse} title={collapsed ? "펼치기" : "접기"}>{collapsed ? "▾" : "▴"}</button>
@@ -173,7 +193,7 @@
           {#if !collapsedCats.has(cat.id)}
           <ul>
             {#each todosByCategory(cat.id) as t (t.id)}
-              <li class:done={t.done}>
+              <li class:done={t.done} class:flash={flashIds.has(t.id)}>
                 <label>
                   <input type="checkbox" checked={t.done} on:change={() => toggle(t.id)} />
                   <span class="prio">{pEmoji(t.priority)}</span>
@@ -198,7 +218,7 @@
           <div class="cat-header"><span class="cat-name">📦 미분류</span></div>
           <ul>
             {#each todosByCategory(null) as t (t.id)}
-              <li class:done={t.done}>
+              <li class:done={t.done} class:flash={flashIds.has(t.id)}>
                 <label>
                   <input type="checkbox" checked={t.done} on:change={() => toggle(t.id)} />
                   <span class="prio">{pEmoji(t.priority)}</span>
@@ -351,5 +371,16 @@
   .add-btn:hover { opacity: 0.85; }
   footer { display: flex; flex-direction: column; gap: 4px; }
   .status { font-size: 10px; opacity: 0.7; text-align: center; }
+  .badge-new {
+    background: #e81123; color: white; font-size: 10px; font-weight: bold;
+    padding: 1px 6px; border-radius: 8px; cursor: pointer; line-height: 1.5;
+  }
+  li.flash {
+    animation: flashPulse 1.5s ease-out;
+  }
+  @keyframes flashPulse {
+    0% { background: rgba(255, 215, 0, 0.8); transform: scale(1.02); }
+    100% { background: transparent; transform: scale(1); }
+  }
   .error { color: #c00; font-size: 11px; margin: 4px 0; }
 </style>
