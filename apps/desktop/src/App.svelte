@@ -18,6 +18,7 @@
   let errorMsg = "";
   let collapsed = false;
   let onTop = true;
+  let collapsedCats: Set<string> = new Set(); // 접힌 카테고리 id 집합
 
   const meta = AGENT_META[AGENT] || AGENT_META.user;
   const appWindow = getCurrentWindow();
@@ -80,6 +81,12 @@
     if (!confirm(msg)) return;
     await api.deleteCategory(cat.id);
     await refresh();
+  }
+
+  function toggleCatCollapse(catId: string) {
+    if (collapsedCats.has(catId)) collapsedCats.delete(catId);
+    else collapsedCats.add(catId);
+    collapsedCats = collapsedCats; // Svelte 반응성
   }
 
   async function moveCategory(idx: number, dir: -1 | 1) {
@@ -152,7 +159,9 @@
                 <button class="cat-btn" on:click={cancelRename} title="취소">✕</button>
               </div>
             {:else}
-              <span class="cat-name" on:dblclick={() => startRename(cat)}>📂 {cat.name}</span>
+              <span class="cat-name" on:click={() => toggleCatCollapse(cat.id)} on:dblclick={() => startRename(cat)}>
+                {collapsedCats.has(cat.id) ? "▸" : "▾"} 📂 {cat.name}
+              </span>
               <div class="cat-controls" on:mousedown|stopPropagation>
                 <button class="cat-btn" on:click={() => startRename(cat)} title="이름 변경">✏️</button>
                 <button class="cat-btn" on:click={() => moveCategory(idx, -1)} title="위로" disabled={idx === 0}>▲</button>
@@ -161,6 +170,7 @@
               </div>
             {/if}
           </div>
+          {#if !collapsedCats.has(cat.id)}
           <ul>
             {#each todosByCategory(cat.id) as t (t.id)}
               <li class:done={t.done}>
@@ -178,6 +188,7 @@
               <li class="empty-cat">비어있음</li>
             {/each}
           </ul>
+          {/if}
         </section>
       {/each}
 
