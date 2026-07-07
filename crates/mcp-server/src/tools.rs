@@ -187,6 +187,20 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
                 .json::<Value>().await?;
             r
         }
+        "access_review" => {
+            // 세션 점검 + 진행상황 종합 요약
+            let review_agent = call.arguments["agent"]
+                .as_str()
+                .unwrap_or(&agent)
+                .to_string();
+            let r = client
+                .get(format!("{API_BASE}/review"))
+                .query(&[("agent", review_agent.as_str())])
+                .header("X-Agent", &agent)
+                .send().await?
+                .json::<Value>().await?;
+            r
+        }
         other => anyhow::bail!("unknown tool: {other}"),
     })
 }
@@ -333,6 +347,16 @@ pub fn tool_catalog() -> Vec<Value> {
                 "properties": {
                     "name": { "type": "string", "description": "카테고리 이름" },
                     "agent": { "type": "string", "description": "에이전트 이름" }
+                }
+            }
+        }),
+        serde_json::json!({
+            "name": "access_review",
+            "description": "에이전트의 전체 진행상황을 종합 요약합니다. 세션 시작/종료 시 호출하여 어디까지 작업했고 다음에 뭘 해야 하는지 파악. 진행률, 완료된 작업(요약포함), 우선순위별 남은 작업, 긴급 다음 작업을 반환.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "agent": { "type": "string", "description": "점검할 에이전트 이름" }
                 }
             }
         }),

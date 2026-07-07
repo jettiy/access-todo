@@ -86,6 +86,12 @@ pub struct BatchTodos {
     pub todos: Vec<BatchItem>,
 }
 
+/// Query for GET /review
+#[derive(Deserialize)]
+pub struct ReviewQ {
+    pub agent: String,
+}
+
 #[derive(Deserialize, Default)]
 pub struct ListQ {
     #[serde(default)]
@@ -120,6 +126,7 @@ pub fn router(state: AppState) -> Router {
         .route("/categories", post(create_category))
         .route("/categories/reorder", post(reorder_category))
         .route("/categories/:id", axum::routing::patch(rename_category).delete(delete_category))
+        .route("/review", axum::routing::get(review))
         .route("/sync", post(sync_handler))
         .route("/health", get(|| async { "ok" }))
         .layer(cors)
@@ -234,6 +241,71 @@ async fn add_batch(
     }
     if let Err(e) = s.push(&b.agent).await { eprintln!("warn: gist push failed: {e}"); }
     Json(serde_json::json!({ "created": ids.len(), "ids": ids }))
+}
+
+/// GET /review?agent=<name> — 에이전트 진행상황 종합 요약.
+/// 완료된 작업, 진행 중인 작업, 우선순위별 남은 작업을 집계.
+async fn review(
+    State(s): State<AppState>,
+    q: Query<ReviewQ>,
+) -> Json<serde_json::Value> {
+    use std::collections::HashMap;
+    let st = s.store.lock().await;
+    let todos = st.list();
+    let categories = st.list_categories(&q.agent);
+
+    // 에이전트 필터
+    let tag = format!("agent:{}", q.agent);
+    let my_todos: Vec<_> = todos.iter()
+        .filter(|t| t.tags.iter().any(|x| x == &tag) || t.created_by == q.agent)
+        .collect();
+
+    let total = my_todos.len();
+    let done = my_todos.iter().filter(|t| t.done).count();
+    let pending = total - done;
+
+    // 우선순위별 집계
+    let high = my_todos.iter().filter(|t| !t.done && matches!(t.priority, Priority::High)).count();
+    let medium = my_todos.iter().filter(|t| !t.done && matches!(t.priority, Priority::Medium)).count();
+    let low = my_todos.iter().filter(|t| !t.done && matches!(t.priority, Priority::Low)).count();
+
+    // 최근 완료 작업 (요약 포함)
+    let recent_done: Vec<_> = my_todos.iter()
+        .filter(|t| t.done)
+        .map(|t| serde_json::json!({
+            "title": t.title,
+            "summary": t.note.as_deref().unwrap_or(""),
+            "completed_by": t.completed_by.as_deref().unwrap_or(""),
+        }))
+        .collect();
+
+    // 남은 높은 우선순위 작업
+    let urgent: Vec<_> = my_todos.iter()
+        .filter(|t| !t.done && matches!(t.priority, Priority::High))
+        .map(|t| {
+            let cat_name = categories.iter()
+                .find(|c| Some(&c.id) == t.category_id.as_ref())
+                .map(|c| c.name.as_str())
+                .unwrap_or("미분류");
+            serde_json::json!({ "title": t.title, "category": cat_name })
+        })
+        .collect();
+
+    let progress_pct = if total > 0 { (done * 100 / total) } else { 0 };
+
+    Json(serde_json::json!({
+        "agent": q.agent,
+        "progress": format!("{done}/{total} ({progress_pct}%)"),
+        "summary": {
+            "total": total,
+            "completed": done,
+            "pending": pending,
+            "by_priority": { "high": high, "medium": medium, "low": low }
+        },
+        "recently_completed": recent_done,
+        "urgent_next": urgent,
+        "categories": categories.len(),
+    }))
 }
 
 /// Manually trigger a Gist pull (GET remote → merge → local).
