@@ -25,3 +25,5 @@ android/**/*.iml
 .env.local
 .access-secrets.cmd
 access-secrets*
+bin/*.exe
+bin/.access-secrets*
