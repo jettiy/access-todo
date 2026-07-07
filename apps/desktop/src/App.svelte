@@ -143,9 +143,17 @@
     return todos.filter((t) => (t.category_id ?? null) === catId);
   }
 
+  let pollTimer: ReturnType<typeof setInterval>;
+
   onMount(() => {
     refresh();
-    setInterval(refresh, 15000);
+    // 5초 폴링 — 에이전트가 추가한 항목이 5초 내 표시됨
+    pollTimer = setInterval(refresh, 5000);
+    // 창이 다시 포커스되면 즉시 새로고침
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) refresh();
+    });
   });
 
   $: doneCount = todos.filter((t) => t.done).length;
