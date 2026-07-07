@@ -18,3 +18,7 @@ path = "src/lib.rs"
 [[bin]]
 name = "mcp-server"
 path = "src/main.rs"
+
+[dev-dependencies]
+wiremock = "0.6"
+tokio = { workspace = true }

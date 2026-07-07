@@ -5,7 +5,13 @@
 
 use serde_json::Value;
 
-const API_BASE: &str = "http://127.0.0.1:7878";
+/// Base URL for the Access REST API.
+///
+/// Defaults to `http://127.0.0.1:7878` but can be overridden via the
+/// `ACCESS_API_BASE` env var (used by tests with a mock server).
+fn api_base() -> String {
+    std::env::var("ACCESS_API_BASE").unwrap_or_else(|_| "http://127.0.0.1:7878".into())
+}
 
 /// A single tool invocation: name + arguments object.
 pub struct ToolCall {
@@ -31,14 +37,15 @@ fn id_of(args: &Value) -> anyhow::Result<String> {
 pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
     let agent = agent_of(&call.arguments);
     let client = reqwest::Client::new();
+    let base = api_base();
 
     Ok(match call.name.as_str() {
         "list_todos" => {
             // agent 인수가 있으면 ?agent= 필터로 해당 에이전트의 할 일만 조회
             let url = if !agent.is_empty() && agent != "unknown" {
-                format!("{API_BASE}/todos?agent={agent}")
+                format!("{base}/todos?agent={agent}")
             } else {
-                format!("{API_BASE}/todos")
+                format!("{base}/todos")
             };
             let r = client
                 .get(&url)
@@ -49,7 +56,7 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
         }
         "get_today_todos" => {
             let r = client
-                .get(format!("{API_BASE}/todos/today"))
+                .get(format!("{base}/todos/today"))
                 .header("X-Agent", &agent)
                 .send().await?
                 .json::<Value>().await?;
@@ -58,7 +65,7 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
         "get_todo" => {
             let id = id_of(&call.arguments)?;
             let r = client
-                .get(format!("{API_BASE}/todos/{id}"))
+                .get(format!("{base}/todos/{id}"))
                 .header("X-Agent", &agent)
                 .send().await?
                 .json::<Value>().await?;
@@ -85,7 +92,7 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
                 body["category_id"] = Value::String(cat_id.into());
             }
             let r = client
-                .post(format!("{API_BASE}/todos"))
+                .post(format!("{base}/todos"))
                 .header("X-Agent", &agent)
                 .header("Content-Type", "application/json")
                 .json(&body)
@@ -96,7 +103,7 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
         "update_todo" => {
             let id = id_of(&call.arguments)?;
             let r = client
-                .patch(format!("{API_BASE}/todos/{id}"))
+                .patch(format!("{base}/todos/{id}"))
                 .header("X-Agent", &agent)
                 .header("Content-Type", "application/json")
                 .json(&call.arguments)
@@ -107,7 +114,7 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
         "toggle_todo" => {
             let id = id_of(&call.arguments)?;
             let r = client
-                .post(format!("{API_BASE}/todos/{id}/toggle"))
+                .post(format!("{base}/todos/{id}/toggle"))
                 .header("X-Agent", &agent)
                 .send().await?
                 .json::<Value>().await?;
@@ -121,7 +128,7 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
                 .unwrap_or("작업 완료");
             let body = serde_json::json!({ "summary": summary });
             let r = client
-                .post(format!("{API_BASE}/todos/{id}/complete"))
+                .post(format!("{base}/todos/{id}/complete"))
                 .header("X-Agent", &agent)
                 .header("Content-Type", "application/json")
                 .json(&body)
@@ -132,7 +139,7 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
         "delete_todo" => {
             let id = id_of(&call.arguments)?;
             let r = client
-                .delete(format!("{API_BASE}/todos/{id}"))
+                .delete(format!("{base}/todos/{id}"))
                 .header("X-Agent", &agent)
                 .send().await?
                 .json::<Value>().await?;
@@ -143,7 +150,7 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
                 .as_str()
                 .ok_or_else(|| anyhow::anyhow!("q required"))?;
             let r = client
-                .get(format!("{API_BASE}/todos/search"))
+                .get(format!("{base}/todos/search"))
                 .query(&[("q", q)])
                 .header("X-Agent", &agent)
                 .send().await?
@@ -161,7 +168,7 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
                 .ok_or_else(|| anyhow::anyhow!("todos array required"))?;
             let body = serde_json::json!({ "agent": batch_agent, "todos": todos });
             let r = client
-                .post(format!("{API_BASE}/batch/todos"))
+                .post(format!("{base}/batch/todos"))
                 .header("X-Agent", &agent)
                 .header("Content-Type", "application/json")
                 .json(&body)
@@ -179,7 +186,7 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
                 .ok_or_else(|| anyhow::anyhow!("name required"))?;
             let body = serde_json::json!({ "agent": cat_agent, "name": name });
             let r = client
-                .post(format!("{API_BASE}/categories"))
+                .post(format!("{base}/categories"))
                 .header("X-Agent", &agent)
                 .header("Content-Type", "application/json")
                 .json(&body)
@@ -194,7 +201,7 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
                 .unwrap_or(&agent)
                 .to_string();
             let r = client
-                .get(format!("{API_BASE}/review"))
+                .get(format!("{base}/review"))
                 .query(&[("agent", review_agent.as_str())])
                 .header("X-Agent", &agent)
                 .send().await?
@@ -260,6 +267,7 @@ pub fn tool_catalog() -> Vec<Value> {
                     "priority": { "type": "string", "enum": ["high", "medium", "low"] },
                     "due_date": { "type": ["string", "null"] },
                     "tags": { "type": "array", "items": { "type": "string" } },
+                    "category_id": { "type": ["string", "null"], "description": "카테고리 ID (선택). null로 설정 시 카테고리 해제" },
                     "agent": { "type": "string" }
                 }
             }

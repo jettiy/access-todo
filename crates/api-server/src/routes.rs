@@ -36,6 +36,8 @@ pub struct PatchTodo {
     pub due_date: Option<Option<String>>,
     #[serde(default)]
     pub tags: Option<Vec<String>>,
+    #[serde(default)]
+    pub category_id: Option<Option<String>>,
 }
 
 #[derive(Deserialize)]
@@ -408,6 +410,7 @@ async fn update(
             priority: b.priority.map(parse_prio),
             due_date: b.due_date,
             tags: b.tags,
+            category_id: b.category_id,
         };
         st.update(&id, patch, &actor)
     };

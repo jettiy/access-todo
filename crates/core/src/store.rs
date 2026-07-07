@@ -21,7 +21,7 @@ pub struct TodoInput {
 }
 
 /// Partial update for a todo. `None` means "leave unchanged"; for the
-/// nullable `note`/`due_date` fields use `Some(None)` to clear.
+/// nullable `note`/`due_date`/`category_id` fields use `Some(None)` to clear.
 #[derive(Debug, Clone, Default)]
 pub struct TodoPatch {
     pub title: Option<String>,
@@ -29,6 +29,7 @@ pub struct TodoPatch {
     pub priority: Option<Priority>,
     pub due_date: Option<Option<String>>,
     pub tags: Option<Vec<String>>,
+    pub category_id: Option<Option<String>>,
 }
 
 /// In-memory store of todos and categories. Cloneable so servers can snapshot safely.
@@ -184,6 +185,9 @@ impl Store {
         }
         if let Some(v) = p.tags {
             t.tags = v;
+        }
+        if let Some(v) = p.category_id {
+            t.category_id = v;
         }
         t.updated_at = Some(now);
         t.updated_by = Some(actor.into());

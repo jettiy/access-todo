@@ -10,6 +10,7 @@ fn user_store() -> Store {
             priority: Priority::Medium,
             due_date: Some("2099-01-01".into()),
             tags: vec![],
+            category_id: None,
         },
         "user",
     );
@@ -66,6 +67,38 @@ fn update_records_updated_by() {
 }
 
 #[test]
+fn update_changes_category_id() {
+    let mut s = user_store();
+    let id = s.list()[0].id.clone();
+    // initially no category
+    assert!(s.get(&id).unwrap().category_id.is_none());
+    // set category via patch
+    let t = s
+        .update(
+            &id,
+            TodoPatch {
+                category_id: Some(Some("cat-test-123".into())),
+                ..Default::default()
+            },
+            "hermes",
+        )
+        .unwrap();
+    assert_eq!(t.category_id.as_deref(), Some("cat-test-123"));
+    // clear category via patch
+    let t = s
+        .update(
+            &id,
+            TodoPatch {
+                category_id: Some(None),
+                ..Default::default()
+            },
+            "hermes",
+        )
+        .unwrap();
+    assert!(t.category_id.is_none());
+}
+
+#[test]
 fn delete_removes() {
     let mut s = user_store();
     let id = s.list()[0].id.clone();
@@ -83,6 +116,7 @@ fn search_matches_title_note_and_tag() {
             priority: Priority::Low,
             due_date: None,
             tags: vec!["errand".into()],
+            category_id: None,
         },
         "user",
     );
@@ -103,6 +137,7 @@ fn list_today_filters_unmatched() {
             priority: Priority::High,
             due_date: Some(today),
             tags: vec![],
+            category_id: None,
         },
         "user",
     );
@@ -113,6 +148,7 @@ fn list_today_filters_unmatched() {
             priority: Priority::Low,
             due_date: Some("1999-01-01".into()),
             tags: vec![],
+            category_id: None,
         },
         "user",
     );

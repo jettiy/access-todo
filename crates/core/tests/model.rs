@@ -11,6 +11,7 @@ fn serde_roundtrip_todo() {
         priority: Priority::High,
         due_date: Some("2026-07-07".into()),
         tags: vec!["errand".into()],
+        category_id: None,
         created_at: Utc::now(),
         created_by: "user".into(),
         completed_at: None,

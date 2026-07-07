@@ -8,6 +8,7 @@ fn doc(todos: Vec<Todo>) -> TodoDoc {
         updated_at: Utc::now(),
         updated_by: "x".into(),
         todos,
+        categories: vec![],
     }
 }
 
@@ -20,6 +21,7 @@ fn bare(id: &str, title: &str) -> Todo {
         priority: Priority::Medium,
         due_date: None,
         tags: vec![],
+        category_id: None,
         created_at: Utc::now(),
         created_by: "x".into(),
         completed_at: None,

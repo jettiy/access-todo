@@ -16,6 +16,7 @@ async fn pull_merges_remote_into_local() {
             priority: Priority::Low,
             due_date: None,
             tags: vec![],
+            category_id: None,
         },
         "remote-actor",
     );
@@ -24,6 +25,7 @@ async fn pull_merges_remote_into_local() {
         updated_at: chrono::Utc::now(),
         updated_by: "remote-actor".into(),
         todos: remote_store.list(),
+        categories: vec![],
     };
     let body = serde_json::json!({
         "files": {
@@ -63,6 +65,7 @@ async fn push_writes_local_doc_to_gist() {
             priority: Priority::Medium,
             due_date: None,
             tags: vec![],
+            category_id: None,
         },
         "user",
     );
