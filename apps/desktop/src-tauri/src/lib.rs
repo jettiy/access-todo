@@ -1,8 +1,10 @@
 // Tauri app: spawns one post-it window per agent on startup.
+// Window positions are saved/restored automatically via tauri-plugin-window-state.
 
 use tauri::{WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_window_state::StateFlags;
 
-/// Each entry: (window label, display title, x, y, background color)
+/// Each entry: (window label, display title, default x, default y, background color)
 const AGENT_WINDOWS: &[(&str, &str, f64, f64, &str)] = &[
     ("hermes", "🤖 Hermes", 50.0, 50.0, "#ffd0e8"),
     ("omp", "🛠️ OMP", 390.0, 50.0, "#c8e0f5"),
@@ -13,8 +15,15 @@ const AGENT_WINDOWS: &[(&str, &str, f64, f64, &str)] = &[
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                .with_state_flags(
+                    StateFlags::POSITION | StateFlags::SIZE | StateFlags::MAXIMIZED,
+                )
+                .build(),
+        )
         .setup(|app| {
-            for (label, title, x, y, bg) in AGENT_WINDOWS {
+            for (label, title, x, y, _bg) in AGENT_WINDOWS {
                 let url = WebviewUrl::App(format!("index.html?agent={label}").into());
                 WebviewWindowBuilder::new(app, *label, url)
                     .title(*title)
@@ -24,7 +33,7 @@ pub fn run() {
                     .always_on_top(true)
                     .transparent(false)
                     .resizable(true)
-                    .skip_taskbar(true)
+                    .skip_taskbar(false)
                     .build()?;
             }
             Ok(())

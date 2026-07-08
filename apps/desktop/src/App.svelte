@@ -129,7 +129,13 @@
 
   function toggleOnTop() { onTop = !onTop; appWindow.setAlwaysOnTop(onTop); }
   function minimize() { appWindow.minimize(); }
-  function close() { appWindow.close(); }
+  async function close() {
+    // 닫기 전 Gist에 동기화 (최신 상태 보장)
+    try {
+      await fetch("http://127.0.0.1:7878/sync", { method: "POST", headers: { "X-Agent": AGENT } });
+    } catch {}
+    await appWindow.close();
+  }
   function toggleCollapse() { collapsed = !collapsed; }
   function startDrag() { appWindow.startDragging(); }
   function titleMousedown(e: MouseEvent) {
