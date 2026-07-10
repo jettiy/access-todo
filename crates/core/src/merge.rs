@@ -73,5 +73,6 @@ pub fn merge(local: &TodoDoc, remote: &TodoDoc) -> TodoDoc {
         updated_by: "merge".into(),
         todos,
         categories,
+        dev_notes: vec![],
     }
 }

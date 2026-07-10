@@ -1,5 +1,6 @@
 //! Core: TODO store, schema, Gist sync, merge.
 
+pub mod devnote;
 pub mod error;
 pub mod gist;
 pub mod merge;

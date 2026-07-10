@@ -84,6 +84,8 @@ pub struct TodoDoc {
     pub todos: Vec<Todo>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub categories: Vec<Category>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dev_notes: Vec<DevNote>,
 }
 
 impl TodoDoc {
@@ -95,6 +97,7 @@ impl TodoDoc {
             updated_by: actor.into(),
             todos: vec![],
             categories: vec![],
+            dev_notes: vec![],
         }
     }
 }
@@ -107,4 +110,59 @@ pub fn new_id() -> String {
 /// Generate a category id (prefixed for readability in the JSON).
 pub fn new_cat_id() -> String {
     format!("cat-{}", Uuid::new_v4())
+}
+
+/// Type of a dev note. Serializes as lowercase strings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum NoteType {
+    Worklog,
+    Retrospect,
+    Issue,
+    Playtest,
+}
+
+/// Game system classification for notes. Serializes as lowercase strings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum GameSystem {
+    Combat,
+    Inventory,
+    Quest,
+    Skill,
+    Ui,
+    Audio,
+    Map,
+    Ai,
+    Save,
+    Network,
+    Etc,
+}
+
+/// A single dev note entry (worklog, retrospect, issue, or playtest).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevNote {
+    pub id: String,
+    pub note_type: NoteType,
+    pub title: String,
+    pub body: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub game_system: Option<GameSystem>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub linked_todos: Vec<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    pub created_at: DateTime<Utc>,
+    pub created_by: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updated_by: Option<String>,
+}
+
+/// Generate a dev note id (prefixed for readability in the JSON).
+pub fn new_note_id() -> String {
+    format!("note-{}", Uuid::new_v4())
 }

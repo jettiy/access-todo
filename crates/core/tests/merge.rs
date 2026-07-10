@@ -9,6 +9,7 @@ fn doc(todos: Vec<Todo>) -> TodoDoc {
         updated_by: "x".into(),
         todos,
         categories: vec![],
+        dev_notes: vec![],
     }
 }
 

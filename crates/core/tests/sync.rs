@@ -26,6 +26,7 @@ async fn pull_merges_remote_into_local() {
         updated_by: "remote-actor".into(),
         todos: remote_store.list(),
         categories: vec![],
+        dev_notes: vec![],
     };
     let body = serde_json::json!({
         "files": {

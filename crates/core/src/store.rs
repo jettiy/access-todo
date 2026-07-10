@@ -297,6 +297,7 @@ impl Store {
             updated_by: actor.into(),
             todos: self.todos,
             categories: self.categories,
+            dev_notes: vec![],
         }
     }
 
