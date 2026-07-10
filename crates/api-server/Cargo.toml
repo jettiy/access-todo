@@ -14,7 +14,9 @@ tower = "0.5"
 tower-http = { version = "0.6", features = ["cors"] }
 anyhow = "1"
 http = "1"
+chrono = { workspace = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }
 tower = { version = "0.5", features = ["util"] }
+chrono = { workspace = true }

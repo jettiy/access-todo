@@ -8,8 +8,8 @@ use axum::{
 };
 use serde::Deserialize;
 
-use todo_core::model::Priority;
-use todo_core::store::{TodoInput, TodoPatch};
+use todo_core::model::{GameSystem, NoteType, Priority};
+use todo_core::store::{DevNoteInput, DevNotePatch, NoteFilter, TodoInput, TodoPatch};
 
 use crate::auth::agent_from_headers;
 use crate::state::AppState;
@@ -102,6 +102,78 @@ pub struct ListQ {
     pub agent: Option<String>,
 }
 
+// ── Dev Note request types ──
+
+#[derive(Deserialize)]
+pub struct NewDevNote {
+    pub note_type: String,
+    pub title: String,
+    #[serde(default)]
+    pub body: String,
+    pub game_system: Option<String>,
+    pub version: Option<String>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
+}
+
+#[derive(Deserialize, Default)]
+pub struct PatchDevNote {
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub body: Option<String>,
+    #[serde(default)]
+    pub game_system: Option<Option<String>>,
+    #[serde(default)]
+    pub version: Option<Option<String>>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
+}
+
+#[derive(Deserialize)]
+pub struct WorklogBody {
+    pub date: Option<String>,
+    pub agent: Option<String>,
+}
+
+#[derive(Deserialize, Default)]
+pub struct DevNoteListQ {
+    #[serde(default)]
+    pub note_type: Option<String>,
+    #[serde(default)]
+    pub game_system: Option<String>,
+    #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
+    pub agent: Option<String>,
+}
+
+fn parse_note_type(s: &str) -> NoteType {
+    match s {
+        "worklog" => NoteType::Worklog,
+        "retrospect" => NoteType::Retrospect,
+        "issue" => NoteType::Issue,
+        "playtest" => NoteType::Playtest,
+        _ => NoteType::Retrospect,
+    }
+}
+
+fn parse_game_system(s: &str) -> GameSystem {
+    match s {
+        "combat" => GameSystem::Combat,
+        "inventory" => GameSystem::Inventory,
+        "quest" => GameSystem::Quest,
+        "skill" => GameSystem::Skill,
+        "ui" => GameSystem::Ui,
+        "audio" => GameSystem::Audio,
+        "map" => GameSystem::Map,
+        "ai" => GameSystem::Ai,
+        "save" => GameSystem::Save,
+        "network" => GameSystem::Network,
+        _ => GameSystem::Etc,
+    }
+}
+
 fn parse_prio(s: String) -> Priority {
     match s.as_str() {
         "high" => Priority::High,
@@ -130,6 +202,11 @@ pub fn router(state: AppState) -> Router {
         .route("/categories/:id", axum::routing::patch(rename_category).delete(delete_category))
         .route("/review", axum::routing::get(review))
         .route("/sync", post(sync_handler))
+        .route("/devnotes", get(list_devnotes).post(add_devnote))
+        .route("/devnotes/timeline", get(devnotes_timeline))
+        .route("/devnotes/by-version/:ver", get(devnotes_by_version))
+        .route("/devnotes/worklog/generate", post(generate_worklog_handler))
+        .route("/devnotes/:id", get(one_devnote).patch(update_devnote).delete(delete_devnote))
         .route("/health", get(|| async { "ok" }))
         .layer(cors)
         .with_state(state)
@@ -481,4 +558,149 @@ async fn remove(
         }
         Err(_) => Err(StatusCode::NOT_FOUND),
     }
+}
+
+// ── Dev Notes handlers ──
+
+async fn list_devnotes(
+    State(s): State<AppState>,
+    q: Query<DevNoteListQ>,
+) -> Json<serde_json::Value> {
+    let st = s.store.lock().await;
+    let filter = NoteFilter {
+        note_type: q.note_type.as_deref().map(parse_note_type),
+        game_system: q.game_system.as_deref().map(parse_game_system),
+        version: q.version.clone(),
+    };
+    let mut notes = st.list_devnotes(filter);
+    if let Some(ref agent) = q.agent {
+        let tag = format!("agent:{agent}");
+        notes.retain(|n| n.tags.iter().any(|t| t == &tag) || n.created_by == *agent);
+    }
+    Json(serde_json::json!({ "devnotes": notes }))
+}
+
+async fn one_devnote(
+    State(s): State<AppState>,
+    Path(id): Path<String>,
+) -> Json<serde_json::Value> {
+    let st = s.store.lock().await;
+    match st.get_devnote(&id) {
+        Some(n) => Json(serde_json::to_value(n).unwrap_or(serde_json::Value::Null)),
+        None => Json(serde_json::Value::Null),
+    }
+}
+
+async fn add_devnote(
+    State(s): State<AppState>,
+    h: HeaderMap,
+    Json(b): Json<NewDevNote>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let actor = agent_from_headers(&h);
+    let note = {
+        let mut st = s.store.lock().await;
+        st.add_devnote(
+            DevNoteInput {
+                note_type: parse_note_type(&b.note_type),
+                title: b.title,
+                body: b.body,
+                game_system: b.game_system.as_deref().map(parse_game_system),
+                version: b.version,
+                tags: b.tags.unwrap_or_default(),
+            },
+            &actor,
+        )
+    };
+    if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+    Ok(Json(serde_json::to_value(note).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+}
+
+async fn update_devnote(
+    State(s): State<AppState>,
+    Path(id): Path<String>,
+    h: HeaderMap,
+    Json(b): Json<PatchDevNote>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let actor = agent_from_headers(&h);
+    let result = {
+        let mut st = s.store.lock().await;
+        let patch = DevNotePatch {
+            title: b.title,
+            body: b.body,
+            game_system: b.game_system.map(|opt| opt.map(|s| parse_game_system(&s))),
+            version: b.version,
+            tags: b.tags,
+        };
+        st.update_devnote(&id, patch, &actor)
+    };
+    match result {
+        Ok(n) => {
+            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            Ok(Json(serde_json::to_value(n).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+        }
+        Err(_) => Err(StatusCode::NOT_FOUND),
+    }
+}
+
+async fn delete_devnote(
+    State(s): State<AppState>,
+    Path(id): Path<String>,
+    h: HeaderMap,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let actor = agent_from_headers(&h);
+    let result = {
+        let mut st = s.store.lock().await;
+        st.delete_devnote(&id)
+    };
+    match result {
+        Ok(()) => {
+            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            Ok(Json(serde_json::json!({ "deleted": id })))
+        }
+        Err(_) => Err(StatusCode::NOT_FOUND),
+    }
+}
+
+async fn generate_worklog_handler(
+    State(s): State<AppState>,
+    h: HeaderMap,
+    Json(b): Json<WorklogBody>,
+) -> Json<serde_json::Value> {
+    let actor = agent_from_headers(&h);
+    let date = b.date.unwrap_or_else(|| {
+        chrono::Utc::now().format("%Y-%m-%d").to_string()
+    });
+    let result = {
+        let mut st = s.store.lock().await;
+        st.generate_worklog(&date, b.agent.as_deref(), &actor)
+    };
+    if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+    Json(serde_json::json!({
+        "created": result.created,
+        "note_id": result.note_id,
+        "todos_counted": result.todos_counted,
+        "systems": result.systems,
+    }))
+}
+
+async fn devnotes_by_version(
+    State(s): State<AppState>,
+    Path(ver): Path<String>,
+) -> Json<serde_json::Value> {
+    let st = s.store.lock().await;
+    let notes: Vec<_> = st
+        .list_devnotes(NoteFilter::default())
+        .into_iter()
+        .filter(|n| n.version.as_deref() == Some(ver.as_str()))
+        .collect();
+    Json(serde_json::json!({ "devnotes": notes, "version": ver }))
+}
+
+async fn devnotes_timeline(
+    State(s): State<AppState>,
+) -> Json<serde_json::Value> {
+    let st = s.store.lock().await;
+    let mut notes = st.list_devnotes(NoteFilter::default());
+    notes.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    Json(serde_json::json!({ "devnotes": notes }))
 }
