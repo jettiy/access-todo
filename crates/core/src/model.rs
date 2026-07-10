@@ -123,7 +123,7 @@ pub enum NoteType {
 }
 
 /// Game system classification for notes. Serializes as lowercase strings.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum GameSystem {
     Combat,
