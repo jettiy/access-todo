@@ -54,6 +54,31 @@ export interface Todo {
   updated_by?: string | null;
 }
 
+export type NoteType = "worklog" | "retrospect" | "issue" | "playtest";
+export type GameSystem = "combat" | "inventory" | "quest" | "skill" | "ui" | "audio" | "map" | "ai" | "save" | "network" | "etc";
+
+export interface DevNote {
+  id: string;
+  note_type: NoteType;
+  title: string;
+  body: string;
+  game_system?: GameSystem | null;
+  version?: string | null;
+  linked_todos: string[];
+  tags: string[];
+  created_at: string;
+  created_by: string;
+  updated_at?: string | null;
+  updated_by?: string | null;
+}
+
+export interface WorklogResult {
+  created: boolean;
+  note_id: string;
+  todos_counted: number;
+  systems: string[];
+}
+
 async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   const r = await fetch(`${BASE}${path}`, {
     ...init,
@@ -82,4 +107,24 @@ export const api = {
     req<{ deleted: string }>(`/categories/${id}`, { method: "DELETE" }),
   reorderCategories: (orderedIds: string[]) =>
     req<{ ok: boolean }>("/categories/reorder", { method: "POST", body: JSON.stringify({ agent: AGENT, ordered_ids: orderedIds }) }),
+};
+
+export const devnoteApi = {
+  list: (params?: { note_type?: NoteType; game_system?: GameSystem; version?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.note_type) qs.set("note_type", params.note_type);
+    if (params?.game_system) qs.set("game_system", params.game_system);
+    if (params?.version) qs.set("version", params.version);
+    const query = qs.toString();
+    return req<{ devnotes: DevNote[] }>(`/devnotes${query ? "?" + query : ""}`);
+  },
+  timeline: () => req<{ devnotes: DevNote[] }>("/devnotes/timeline"),
+  byVersion: (ver: string) => req<{ devnotes: DevNote[]; version: string }>(`/devnotes/by-version/${ver}`),
+  create: (data: { note_type: NoteType; title: string; body: string; game_system?: GameSystem; version?: string; tags?: string[] }) =>
+    req<DevNote>("/devnotes", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: { title?: string; body?: string; game_system?: GameSystem | null; version?: string | null }) =>
+    req<DevNote>(`/devnotes/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  del: (id: string) => req<{ deleted: string }>(`/devnotes/${id}`, { method: "DELETE" }),
+  generateWorklog: (date?: string) =>
+    req<WorklogResult>("/devnotes/worklog/generate", { method: "POST", body: JSON.stringify({ date }) }),
 };
