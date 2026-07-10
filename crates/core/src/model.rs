@@ -122,6 +122,12 @@ pub enum NoteType {
     Playtest,
 }
 
+impl Default for NoteType {
+    fn default() -> Self {
+        NoteType::Retrospect
+    }
+}
+
 /// Game system classification for notes. Serializes as lowercase strings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
