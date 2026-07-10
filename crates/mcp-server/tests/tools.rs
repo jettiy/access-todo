@@ -93,3 +93,87 @@ async fn unknown_tool_errors() {
 
     std::env::remove_var("ACCESS_API_BASE");
 }
+
+// ── Dev Note tool tests ──
+
+#[tokio::test]
+async fn catalog_includes_devnote_tools() {
+    let catalog = mcp_server::tools::tool_catalog();
+    let names: Vec<&str> = catalog.iter()
+        .filter_map(|t| t["name"].as_str())
+        .collect();
+    assert!(names.contains(&"list_devnotes"));
+    assert!(names.contains(&"add_devnote"));
+    assert!(names.contains(&"update_devnote"));
+    assert!(names.contains(&"generate_worklog"));
+}
+
+#[tokio::test]
+async fn add_devnote_via_dispatch() {
+    let server = MockServer::start().await;
+    std::env::set_var("ACCESS_API_BASE", &server.uri());
+
+    Mock::given(method("POST"))
+        .and(path("/devnotes"))
+        .and(header("X-Agent", "zcode"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "id": "note-test",
+            "note_type": "retrospect",
+            "title": "회고",
+            "body": "내용",
+            "created_by": "zcode",
+        })))
+        .mount(&server)
+        .await;
+
+    let out = dispatch(
+        (),
+        ToolCall {
+            name: "add_devnote".into(),
+            arguments: json!({
+                "note_type": "retrospect",
+                "title": "회고",
+                "body": "내용",
+                "agent": "zcode",
+            }),
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(out["id"], json!("note-test"));
+    assert_eq!(out["note_type"], "retrospect");
+
+    std::env::remove_var("ACCESS_API_BASE");
+}
+
+#[tokio::test]
+async fn generate_worklog_via_dispatch() {
+    let server = MockServer::start().await;
+    std::env::set_var("ACCESS_API_BASE", &server.uri());
+
+    Mock::given(method("POST"))
+        .and(path("/devnotes/worklog/generate"))
+        .and(header("X-Agent", "zcode"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "created": true,
+            "note_id": "note-wl",
+            "todos_counted": 3,
+            "systems": ["combat", "ui"],
+        })))
+        .mount(&server)
+        .await;
+
+    let out = dispatch(
+        (),
+        ToolCall {
+            name: "generate_worklog".into(),
+            arguments: json!({ "agent": "zcode" }),
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(out["created"], true);
+    assert_eq!(out["todos_counted"], 3);
+
+    std::env::remove_var("ACCESS_API_BASE");
+}

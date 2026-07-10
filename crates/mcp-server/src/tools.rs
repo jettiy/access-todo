@@ -208,6 +208,85 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
                 .json::<Value>().await?;
             r
         }
+        "list_devnotes" => {
+            let mut url = format!("{base}/devnotes?");
+            let mut first = true;
+            if let Some(nt) = call.arguments.get("note_type").and_then(|v| v.as_str()) {
+                url.push_str("note_type="); url.push_str(nt); first = false;
+            }
+            if let Some(gs) = call.arguments.get("game_system").and_then(|v| v.as_str()) {
+                if !first { url.push('&'); }
+                url.push_str("game_system="); url.push_str(gs); first = false;
+            }
+            if let Some(ver) = call.arguments.get("version").and_then(|v| v.as_str()) {
+                if !first { url.push('&'); }
+                url.push_str("version="); url.push_str(ver); first = false;
+            }
+            if !first { url.push('&'); }
+            url.push_str("agent="); url.push_str(&agent);
+            let r = client
+                .get(&url)
+                .header("X-Agent", &agent)
+                .send().await?
+                .json::<Value>().await?;
+            r
+        }
+        "add_devnote" => {
+            let note_type = call.arguments["note_type"]
+                .as_str()
+                .ok_or_else(|| anyhow::anyhow!("note_type required"))?;
+            let title = call.arguments["title"]
+                .as_str()
+                .ok_or_else(|| anyhow::anyhow!("title required"))?;
+            let mut body = serde_json::json!({
+                "note_type": note_type,
+                "title": title,
+                "body": call.arguments.get("body").and_then(|v| v.as_str()).unwrap_or(""),
+            });
+            if let Some(gs) = call.arguments.get("game_system").and_then(|v| v.as_str()) {
+                body["game_system"] = Value::String(gs.into());
+            }
+            if let Some(ver) = call.arguments.get("version").and_then(|v| v.as_str()) {
+                body["version"] = Value::String(ver.into());
+            }
+            body["tags"] = Value::Array(vec![Value::String(format!("agent:{agent}"))]);
+            let r = client
+                .post(format!("{base}/devnotes"))
+                .header("X-Agent", &agent)
+                .header("Content-Type", "application/json")
+                .json(&body)
+                .send().await?
+                .json::<Value>().await?;
+            r
+        }
+        "update_devnote" => {
+            let id = id_of(&call.arguments)?;
+            let r = client
+                .patch(format!("{base}/devnotes/{id}"))
+                .header("X-Agent", &agent)
+                .header("Content-Type", "application/json")
+                .json(&call.arguments)
+                .send().await?
+                .json::<Value>().await?;
+            r
+        }
+        "generate_worklog" => {
+            let mut body = serde_json::json!({});
+            if let Some(date) = call.arguments.get("date").and_then(|v| v.as_str()) {
+                body["date"] = Value::String(date.into());
+            }
+            if let Some(wl_agent) = call.arguments.get("agent").and_then(|v| v.as_str()) {
+                body["agent"] = Value::String(wl_agent.into());
+            }
+            let r = client
+                .post(format!("{base}/devnotes/worklog/generate"))
+                .header("X-Agent", &agent)
+                .header("Content-Type", "application/json")
+                .json(&body)
+                .send().await?
+                .json::<Value>().await?;
+            r
+        }
         other => anyhow::bail!("unknown tool: {other}"),
     })
 }
@@ -365,6 +444,62 @@ pub fn tool_catalog() -> Vec<Value> {
                 "type": "object",
                 "properties": {
                     "agent": { "type": "string", "description": "점검할 에이전트 이름" }
+                }
+            }
+        }),
+        serde_json::json!({
+            "name": "list_devnotes",
+            "description": "개발노트를 조회합니다. note_type, game_system, version으로 필터링 가능.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "note_type": { "type": "string", "enum": ["worklog", "retrospect", "issue", "playtest"] },
+                    "game_system": { "type": "string", "enum": ["combat", "inventory", "quest", "skill", "ui", "audio", "map", "ai", "save", "network", "etc"] },
+                    "version": { "type": "string" },
+                    "agent": { "type": "string" }
+                }
+            }
+        }),
+        serde_json::json!({
+            "name": "add_devnote",
+            "description": "개발노트를 추가합니다 (회고, 이슈, 플레이테스트). 에이전트가 작업 후 기록용.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["note_type", "title", "body"],
+                "properties": {
+                    "note_type": { "type": "string", "enum": ["retrospect", "issue", "playtest"], "description": "노트 타입 (worklog는 generate_worklog로 자동 생성)" },
+                    "title": { "type": "string" },
+                    "body": { "type": "string", "description": "마크다운 본문" },
+                    "game_system": { "type": "string", "enum": ["combat", "inventory", "quest", "skill", "ui", "audio", "map", "ai", "save", "network", "etc"] },
+                    "version": { "type": "string", "description": "예: v0.2-alpha" },
+                    "agent": { "type": "string" }
+                }
+            }
+        }),
+        serde_json::json!({
+            "name": "update_devnote",
+            "description": "개발노트를 수정합니다.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["id"],
+                "properties": {
+                    "id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "body": { "type": "string" },
+                    "game_system": { "type": ["string", "null"] },
+                    "version": { "type": ["string", "null"] },
+                    "agent": { "type": "string" }
+                }
+            }
+        }),
+        serde_json::json!({
+            "name": "generate_worklog",
+            "description": "완료된 todo로부터 작업 로그를 자동 생성합니다. 게임 시스템별로 그룹화된 마크다운 노트가 만들어집니다.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "date": { "type": "string", "description": "기준 날짜 YYYY-MM-DD (기본: 오늘)" },
+                    "agent": { "type": "string", "description": "특정 에이전트의 작업만 (선택)" }
                 }
             }
         }),
