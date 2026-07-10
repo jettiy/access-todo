@@ -7,7 +7,8 @@
     "version": { "const": "1.0" },
     "updated_at": { "type": "string", "format": "date-time" },
     "updated_by": { "type": "string" },
-    "todos": { "type": "array", "items": { "$ref": "#/$defs/Todo" } }
+    "todos": { "type": "array", "items": { "$ref": "#/$defs/Todo" } },
+    "dev_notes": { "type": "array", "items": { "$ref": "#/$defs/DevNote" } }
   },
   "$defs": {
     "Todo": {
@@ -39,6 +40,24 @@
             }
           }
         }
+      }
+    },
+    "DevNote": {
+      "type": "object",
+      "required": ["id", "note_type", "title", "body", "created_at", "created_by"],
+      "properties": {
+        "id": { "type": "string" },
+        "note_type": { "enum": ["worklog", "retrospect", "issue", "playtest"] },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "game_system": { "enum": ["combat", "inventory", "quest", "skill", "ui", "audio", "map", "ai", "save", "network", "etc"] },
+        "version": { "type": ["string", "null"] },
+        "linked_todos": { "type": "array", "items": { "type": "string" } },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "created_at": { "type": "string", "format": "date-time" },
+        "created_by": { "type": "string" },
+        "updated_at": { "type": ["string", "null"] },
+        "updated_by": { "type": ["string", "null"] }
       }
     }
   }
