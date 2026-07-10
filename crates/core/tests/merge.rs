@@ -1,6 +1,6 @@
 use chrono::Utc;
 use todo_core::merge::merge;
-use todo_core::model::{Priority, Todo, TodoDoc};
+use todo_core::model::{DevNote, NoteType, Priority, Todo, TodoDoc};
 
 fn doc(todos: Vec<Todo>) -> TodoDoc {
     TodoDoc {
@@ -77,4 +77,63 @@ fn merge_is_symmetric_in_ids() {
     // result is sorted by id for deterministic output
     let ids: Vec<_> = m.todos.iter().map(|t| t.id.as_str()).collect();
     assert_eq!(ids, vec!["1", "2", "3"]);
+}
+
+// ── Dev Notes merge tests ──
+
+fn note(id: &str, title: &str) -> DevNote {
+    DevNote {
+        id: id.into(),
+        note_type: NoteType::Retrospect,
+        title: title.into(),
+        body: "".into(),
+        game_system: None,
+        version: None,
+        linked_todos: vec![],
+        tags: vec![],
+        created_at: Utc::now(),
+        created_by: "x".into(),
+        updated_at: None,
+        updated_by: None,
+    }
+}
+
+fn doc_with_notes(notes: Vec<DevNote>) -> TodoDoc {
+    TodoDoc {
+        version: "1.0".into(),
+        updated_at: Utc::now(),
+        updated_by: "x".into(),
+        todos: vec![],
+        categories: vec![],
+        dev_notes: notes,
+    }
+}
+
+#[test]
+fn merge_devnotes_union_disjoint_ids() {
+    let a = doc_with_notes(vec![note("note-1", "A")]);
+    let b = doc_with_notes(vec![note("note-2", "B")]);
+    let m = merge(&a, &b);
+    assert_eq!(m.dev_notes.len(), 2);
+}
+
+#[test]
+fn merge_devnotes_latest_updated_at_wins() {
+    let future = Utc::now() + chrono::Duration::days(1);
+    let mut older = note("note-1", "old");
+    older.updated_at = None;
+    let mut newer = note("note-1", "new");
+    newer.updated_at = Some(future);
+    let a = doc_with_notes(vec![older]);
+    let b = doc_with_notes(vec![newer]);
+    let m = merge(&a, &b);
+    assert_eq!(m.dev_notes[0].title, "new");
+}
+
+#[test]
+fn merge_devnotes_empty_preserves_notes() {
+    let a = doc_with_notes(vec![note("note-1", "A")]);
+    let b = doc_with_notes(vec![]);
+    let m = merge(&a, &b);
+    assert_eq!(m.dev_notes.len(), 1);
 }

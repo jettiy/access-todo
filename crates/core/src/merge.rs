@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 
-use crate::model::{Category, Todo, TodoDoc};
+use crate::model::{Category, DevNote, Todo, TodoDoc};
 
 /// Effective change timestamp for a todo: `updated_at` if set, else
 /// `created_at`, else the Unix epoch (oldest possible).
@@ -20,6 +20,12 @@ fn ts(t: &Todo) -> DateTime<Utc> {
 /// Effective change timestamp for a category: `updated_at` if set, else epoch.
 fn cat_ts(c: &Category) -> DateTime<Utc> {
     c.updated_at.unwrap_or(DateTime::UNIX_EPOCH)
+}
+
+/// Effective change timestamp for a dev note: `updated_at` if set, else
+/// `created_at`, else epoch.
+fn note_ts(n: &DevNote) -> DateTime<Utc> {
+    n.updated_at.or(Some(n.created_at)).unwrap_or(DateTime::UNIX_EPOCH)
 }
 
 /// Merge two documents into a fresh document.
@@ -67,12 +73,32 @@ pub fn merge(local: &TodoDoc, remote: &TodoDoc) -> TodoDoc {
     let mut categories: Vec<Category> = cmap.into_values().collect();
     categories.sort_by(|a, b| a.id.cmp(&b.id));
 
+    // Merge dev_notes by id (latest updated_at wins, union of disjoint ids).
+    let mut nmap: HashMap<String, DevNote> = HashMap::new();
+    for n in &local.dev_notes {
+        nmap.insert(n.id.clone(), n.clone());
+    }
+    for n in &remote.dev_notes {
+        match nmap.get(&n.id) {
+            Some(existing) => {
+                if note_ts(n) >= note_ts(existing) {
+                    nmap.insert(n.id.clone(), n.clone());
+                }
+            }
+            None => {
+                nmap.insert(n.id.clone(), n.clone());
+            }
+        }
+    }
+    let mut dev_notes: Vec<DevNote> = nmap.into_values().collect();
+    dev_notes.sort_by(|a, b| a.id.cmp(&b.id));
+
     TodoDoc {
         version: "1.0".into(),
         updated_at: Utc::now(),
         updated_by: "merge".into(),
         todos,
         categories,
-        dev_notes: vec![],
+        dev_notes,
     }
 }
