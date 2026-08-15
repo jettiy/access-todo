@@ -178,3 +178,75 @@ fn add_todo_with_category_via_store() {
     assert_eq!(t.category_id.as_deref(), Some(c.id.as_str()));
     assert_eq!(s.list_categories("zcode").len(), 1);
 }
+
+// ── Auto category mapping ─────────────────────────────────────────────
+
+#[test]
+fn auto_category_prefix_match() {
+    let mut s = Store::new();
+    let c = s.add_category("zcode", "버그 수정");
+    let t = s.add(
+        TodoInput { title: "버그 수정: nil 크래시 고치기".into(), note: None, priority: Priority::High, due_date: None, tags: vec![], category_id: None },
+        "zcode",
+    );
+    assert_eq!(t.category_id.as_deref(), Some(c.id.as_str()), "Name: prefix should auto-map");
+}
+
+#[test]
+fn auto_category_substring_match() {
+    let mut s = Store::new();
+    let c = s.add_category("zcode", "K-STONKS");
+    let t = s.add(
+        TodoInput { title: "K-STONKS 차트 렌더링 개선".into(), note: None, priority: Priority::Medium, due_date: None, tags: vec![], category_id: None },
+        "zcode",
+    );
+    assert_eq!(t.category_id.as_deref(), Some(c.id.as_str()));
+}
+
+#[test]
+fn auto_category_longest_name_wins() {
+    let mut s = Store::new();
+    let short = s.add_category("zcode", "K-STONKS");
+    let long = s.add_category("zcode", "K-STONKS-V2");
+    let t = s.add(
+        TodoInput { title: "K-STONKS-V2: main.lua 수정".into(), note: None, priority: Priority::High, due_date: None, tags: vec![], category_id: None },
+        "zcode",
+    );
+    assert_eq!(t.category_id.as_deref(), Some(long.id.as_str()), "longer name must win over shorter");
+    assert_ne!(t.category_id.as_deref(), Some(short.id.as_str()));
+}
+
+#[test]
+fn auto_category_scoped_to_agent() {
+    let mut s = Store::new();
+    let omp_cat = s.add_category("omp", "버그 수정");
+    let t = s.add(
+        TodoInput { title: "버그 수정: 무언가".into(), note: None, priority: Priority::Medium, due_date: None, tags: vec![], category_id: None },
+        "zcode",
+    );
+    assert_ne!(t.category_id.as_deref(), Some(omp_cat.id.as_str()), "zcode's todo must not land in omp's category");
+    assert_eq!(t.category_id, None, "no matching zcode category → uncategorized");
+}
+
+#[test]
+fn auto_category_respects_explicit_id() {
+    let mut s = Store::new();
+    let a = s.add_category("zcode", "알파");
+    let b = s.add_category("zcode", "베타");
+    let t = s.add(
+        TodoInput { title: "알파 관련 제목이지만 명시적 지정".into(), note: None, priority: Priority::Low, due_date: None, tags: vec![], category_id: Some(b.id.clone()) },
+        "zcode",
+    );
+    assert_eq!(t.category_id.as_deref(), Some(b.id.as_str()), "explicit category_id must never be overridden");
+}
+
+#[test]
+fn auto_category_no_match_stays_uncategorized() {
+    let mut s = Store::new();
+    s.add_category("zcode", "전혀다른폴더");
+    let t = s.add(
+        TodoInput { title: "관련 없는 제목".into(), note: None, priority: Priority::Low, due_date: None, tags: vec![], category_id: None },
+        "zcode",
+    );
+    assert_eq!(t.category_id, None);
+}

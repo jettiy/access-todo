@@ -111,6 +111,12 @@ impl Store {
     /// Add a new todo. Records `created` history entry.
     pub fn add(&mut self, i: TodoInput, actor: &str) -> Todo {
         let now = Utc::now();
+        // Auto-mapping: when no explicit category_id was given, infer one
+        // from the title so todos self-organize into folders with zero
+        // agent effort. Only this agent's own categories are considered.
+        let category_id = i
+            .category_id
+            .or_else(|| self.auto_category(&i.title, actor));
         let todo = Todo {
             id: new_id(),
             title: i.title,
@@ -119,7 +125,7 @@ impl Store {
             priority: i.priority,
             due_date: i.due_date,
             tags: i.tags,
-            category_id: i.category_id,
+            category_id,
             created_at: now,
             created_by: actor.into(),
             completed_at: None,
@@ -134,6 +140,43 @@ impl Store {
         };
         self.todos.push(todo.clone());
         todo
+    }
+
+    /// Infer a category id from a todo title for `agent`.
+    ///
+    /// Matching rules (first hit wins, longest names checked first so
+    /// "K-STONKS-V2" beats "K-STONKS" when both exist):
+    /// 1. `<Name>:` prefix — `"버그 수정: nil 크래시"` → 버그 수정
+    /// 2. plain substring — `"K-STONKS 차트 버그"` → K-STONKS
+    /// Names shorter than 2 chars are ignored to avoid noise matches.
+    fn auto_category(&self, title: &str, agent: &str) -> Option<String> {
+        let lower = title.to_lowercase();
+        let mut cats: Vec<&Category> =
+            self.categories.iter().filter(|c| c.agent == agent).collect();
+        cats.sort_by(|a, b| b.name.len().cmp(&a.name.len()));
+
+        // Rule 1: "Name:" prefix (strong signal)
+        for c in &cats {
+            let name = c.name.to_lowercase();
+            if name.len() < 2 {
+                continue;
+            }
+            let colon = format!("{name}:");
+            if lower.starts_with(&colon) || lower.contains(&format!(" {colon}")) {
+                return Some(c.id.clone());
+            }
+        }
+        // Rule 2: plain substring
+        for c in &cats {
+            let name = c.name.to_lowercase();
+            if name.len() < 2 {
+                continue;
+            }
+            if lower.contains(&name) {
+                return Some(c.id.clone());
+            }
+        }
+        None
     }
 
     // ── Category CRUD ──
