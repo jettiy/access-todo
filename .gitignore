@@ -27,3 +27,12 @@ android/**/*.iml
 access-secrets*
 bin/*.exe
 bin/.access-secrets*
+# 다른 프로젝트/배포본 (실수 커밋 방지)
+WhyGoThere/
+gradle-*/
+android-verify.png
+api-test.log
+api-offline.log
+api-startup.log
+access-data.json
+backups/

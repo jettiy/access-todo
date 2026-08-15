@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { api, AGENT, AGENT_META, type Todo, type Priority, type Category } from "./api";
+  import { api, API_BASE, AGENT, AGENT_META, type Todo, type Priority, type Category } from "./api";
 
   let todos: Todo[] = [];
   let categories: Category[] = [];
@@ -124,11 +124,25 @@
   $: progressPct = totalCount > 0 ? Math.round(doneCount * 100 / totalCount) : 0;
 
   let pollTimer: ReturnType<typeof setInterval>;
+  let events: EventSource | null = null;
+
   onMount(() => {
     refresh();
+    // 폴백 폴링 (SSE 끊김 대비)
     pollTimer = setInterval(refresh, 5000);
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+    // 실시간: 서버 mutation 즉시 반영 (EventSource는 끊기면 자동 재접속)
+    try {
+      events = new EventSource(`${API_BASE}/events`);
+      events.onmessage = () => refresh();
+    } catch { /* SSE unavailable → polling covers us */ }
+  });
+
+  onDestroy(() => {
+    clearInterval(pollTimer);
+    events?.close();
+    window.removeEventListener("focus", refresh);
   });
 </script>
 

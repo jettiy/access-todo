@@ -42,6 +42,18 @@ impl SyncEngine {
         Ok(merged)
     }
 
+    /// Force a full pull: ignores any cached ETag so the server always sees
+    /// the remote document even when a stale 304 would otherwise be returned.
+    /// Used at startup recovery to guarantee the freshest remote state.
+    pub async fn pull_full(&self, local: &mut Store, _actor: &str) -> Result<TodoDoc> {
+        let (remote, new_etag) = self.client.fetch(&self.gist_id, None).await?;
+        let local_doc = local.clone().into_doc("local");
+        let merged = merge(&local_doc, &remote);
+        *local = Store::from_doc(merged.clone());
+        *self.etag.lock().await = new_etag;
+        Ok(merged)
+    }
+
     /// Push the current `local` store to the gist.
     pub async fn push(&self, local: &Store, actor: &str) -> Result<()> {
         let doc = local.clone().into_doc(actor);

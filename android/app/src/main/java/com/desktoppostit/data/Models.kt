@@ -14,6 +14,18 @@ data class TodoDoc(
     @SerialName("updated_at") val updatedAt: String? = null,
     @SerialName("updated_by") val updatedBy: String? = null,
     val todos: List<Todo> = emptyList(),
+    val categories: List<Category> = emptyList(),
+    // dev_notes from newer servers are ignored here (unknown-key tolerant);
+    // Android renders todos + categories only for now.
+)
+
+/** A user-defined folder grouping todos within an agent's post-it. */
+@Serializable
+data class Category(
+    val id: String,
+    val agent: String,
+    val name: String,
+    val order: Int = 0,
 )
 
 @Serializable
@@ -25,6 +37,7 @@ data class Todo(
     val priority: Priority = Priority.medium,
     @SerialName("due_date") val dueDate: String? = null,
     val tags: List<String> = emptyList(),
+    @SerialName("category_id") val categoryId: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("created_by") val createdBy: String? = null,
     @SerialName("completed_at") val completedAt: String? = null,

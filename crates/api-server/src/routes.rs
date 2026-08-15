@@ -202,6 +202,8 @@ pub fn router(state: AppState) -> Router {
         .route("/categories/:id", axum::routing::patch(rename_category).delete(delete_category))
         .route("/review", axum::routing::get(review))
         .route("/sync", post(sync_handler))
+        .route("/events", get(events))
+        .route("/backup", post(backup_handler))
         .route("/devnotes", get(list_devnotes).post(add_devnote))
         .route("/devnotes/timeline", get(devnotes_timeline))
         .route("/devnotes/by-version/:ver", get(devnotes_by_version))
@@ -210,6 +212,31 @@ pub fn router(state: AppState) -> Router {
         .route("/health", get(|| async { "ok" }))
         .layer(cors)
         .with_state(state)
+}
+
+/// GET /events — SSE stream. Emits `changed` whenever any mutation lands,
+/// letting post-it windows refresh instantly instead of waiting for polling.
+async fn events(
+    State(s): State<AppState>,
+) -> axum::response::Sse<impl tokio_stream::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>> {
+    use axum::response::sse::{Event, KeepAlive, Sse};
+    use tokio_stream::wrappers::BroadcastStream;
+    use tokio_stream::StreamExt;
+
+    let rx = s.tx.subscribe();
+    let stream = BroadcastStream::new(rx).filter_map(|msg| match msg {
+        Ok(_) => Some(Ok(Event::default().data("changed"))),
+        Err(_) => None,
+    });
+    Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+/// POST /backup — write a timestamped snapshot to the backups directory.
+async fn backup_handler(State(s): State<AppState>) -> Json<serde_json::Value> {
+    match s.backup().await {
+        Ok(path) => Json(serde_json::json!({ "ok": true, "backup": path })),
+        Err(e) => Json(serde_json::json!({ "ok": false, "error": e })),
+    }
 }
 
 /// POST /categories — create a category for an agent
@@ -223,7 +250,7 @@ async fn create_category(
         let mut st = s.store.lock().await;
         st.add_category(&b.agent, &b.name)
     };
-    if let Err(e) = s.push(&_actor).await { eprintln!("warn: gist push failed: {e}"); }
+    s.persist_and_push(&_actor).await;
     Json(serde_json::to_value(cat).unwrap_or(serde_json::Value::Null))
 }
 
@@ -241,7 +268,7 @@ async fn rename_category(
     };
     match result {
         Ok(c) => {
-            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            s.persist_and_push(&actor).await;
             Ok(Json(serde_json::to_value(c).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
         }
         Err(_) => Err(StatusCode::NOT_FOUND),
@@ -261,7 +288,7 @@ async fn reorder_category(
     };
     match result {
         Ok(()) => {
-            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            s.persist_and_push(&actor).await;
             Ok(Json(serde_json::json!({ "ok": true })))
         }
         Err(_) => Err(StatusCode::NOT_FOUND),
@@ -281,7 +308,7 @@ async fn delete_category(
     };
     match result {
         Ok(()) => {
-            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            s.persist_and_push(&actor).await;
             Ok(Json(serde_json::json!({ "deleted": id })))
         }
         Err(_) => Err(StatusCode::NOT_FOUND),
@@ -318,7 +345,7 @@ async fn add_batch(
             ids.push(t.id);
         }
     }
-    if let Err(e) = s.push(&b.agent).await { eprintln!("warn: gist push failed: {e}"); }
+    s.persist_and_push(&b.agent).await;
     Json(serde_json::json!({ "created": ids.len(), "ids": ids }))
 }
 
@@ -391,6 +418,11 @@ async fn review(
 async fn sync_handler(State(s): State<AppState>) -> Json<serde_json::Value> {
     match s.pull("sync-endpoint").await {
         Ok(()) => {
+            // persist the pulled state locally and notify SSE subscribers
+            if let Err(e) = s.persist("sync").await {
+                eprintln!("warn: persist after sync failed: {e}");
+            }
+            s.broadcast_change();
             let st = s.store.lock().await;
             Json(serde_json::json!({ "ok": true, "count": st.list().len() }))
         }
@@ -468,7 +500,7 @@ async fn add(
         )
     };
     // Best-effort push to Gist (ignore network errors).
-    if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+    s.persist_and_push(&actor).await;
     Ok(Json(serde_json::to_value(t).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
 }
 
@@ -493,7 +525,7 @@ async fn update(
     };
     match result {
         Ok(t) => {
-            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            s.persist_and_push(&actor).await;
             Ok(Json(serde_json::to_value(t).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
         }
         Err(_) => Err(StatusCode::NOT_FOUND),
@@ -512,7 +544,7 @@ async fn toggle(
     };
     match result {
         Ok(t) => {
-            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            s.persist_and_push(&actor).await;
             Ok(Json(serde_json::to_value(t).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
         }
         Err(_) => Err(StatusCode::NOT_FOUND),
@@ -534,7 +566,7 @@ async fn complete(
     };
     match result {
         Ok(t) => {
-            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            s.persist_and_push(&actor).await;
             Ok(Json(serde_json::to_value(t).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
         }
         Err(_) => Err(StatusCode::NOT_FOUND),
@@ -553,7 +585,7 @@ async fn remove(
     };
     match result {
         Ok(()) => {
-            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            s.persist_and_push(&actor).await;
             Ok(Json(serde_json::json!({ "deleted": id })))
         }
         Err(_) => Err(StatusCode::NOT_FOUND),
@@ -611,7 +643,7 @@ async fn add_devnote(
             &actor,
         )
     };
-    if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+    s.persist_and_push(&actor).await;
     Ok(Json(serde_json::to_value(note).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
 }
 
@@ -635,7 +667,7 @@ async fn update_devnote(
     };
     match result {
         Ok(n) => {
-            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            s.persist_and_push(&actor).await;
             Ok(Json(serde_json::to_value(n).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
         }
         Err(_) => Err(StatusCode::NOT_FOUND),
@@ -654,7 +686,7 @@ async fn delete_devnote(
     };
     match result {
         Ok(()) => {
-            if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+            s.persist_and_push(&actor).await;
             Ok(Json(serde_json::json!({ "deleted": id })))
         }
         Err(_) => Err(StatusCode::NOT_FOUND),
@@ -674,7 +706,7 @@ async fn generate_worklog_handler(
         let mut st = s.store.lock().await;
         st.generate_worklog(&date, b.agent.as_deref(), &actor)
     };
-    if let Err(e) = s.push(&actor).await { eprintln!("warn: gist push failed: {e}"); }
+    s.persist_and_push(&actor).await;
     Json(serde_json::json!({
         "created": result.created,
         "note_id": result.note_id,

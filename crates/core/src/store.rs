@@ -138,8 +138,17 @@ impl Store {
 
     // ── Category CRUD ──
 
-    /// Create a new category for an agent. Returns the created category.
+    /// Create a new category for an agent. If the agent already has a
+    /// category with this exact name, return it instead of duplicating —
+    /// duplicate names were the root cause of ghost categories.
     pub fn add_category(&mut self, agent: &str, name: &str) -> Category {
+        if let Some(existing) = self
+            .categories
+            .iter()
+            .find(|c| c.agent == agent && c.name == name)
+        {
+            return existing.clone();
+        }
         let order = self.categories.iter()
             .filter(|c| c.agent == agent)
             .count() as i32;
@@ -152,6 +161,72 @@ impl Store {
         };
         self.categories.push(cat.clone());
         cat
+    }
+
+    /// Collapse duplicate categories that share (agent, name). Keeps the
+    /// id referenced by the most todos, remaps the rest, then re-normalizes
+    /// `order` per agent. Called during startup recovery.
+    pub fn dedupe_categories(&mut self) {
+        use std::collections::{BTreeMap, HashMap, HashSet};
+
+        // reference count per category id
+        let mut refs: HashMap<String, usize> = HashMap::new();
+        for t in &self.todos {
+            if let Some(cid) = &t.category_id {
+                *refs.entry(cid.clone()).or_insert(0) += 1;
+            }
+        }
+
+        // best id per (agent, name): prefer the id most todos point at
+        let mut best: HashMap<(String, String), String> = HashMap::new();
+        for c in &self.categories {
+            let key = (c.agent.clone(), c.name.clone());
+            match best.get(&key) {
+                Some(id) => {
+                    let keep = refs.get(id).copied().unwrap_or(0);
+                    let mine = refs.get(&c.id).copied().unwrap_or(0);
+                    if mine > keep {
+                        best.insert(key, c.id.clone());
+                    }
+                }
+                None => {
+                    best.insert(key, c.id.clone());
+                }
+            }
+        }
+
+        let kept: HashSet<String> = best.values().cloned().collect();
+        let remap: HashMap<String, String> = self
+            .categories
+            .iter()
+            .filter_map(|c| {
+                let key = (c.agent.clone(), c.name.clone());
+                best.get(&key).and_then(|k| {
+                    if k != &c.id {
+                        Some((c.id.clone(), k.clone()))
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect();
+
+        for t in &mut self.todos {
+            if let Some(cid) = &t.category_id {
+                if let Some(to) = remap.get(cid) {
+                    t.category_id = Some(to.clone());
+                }
+            }
+        }
+        self.categories.retain(|c| kept.contains(&c.id));
+
+        // re-normalize order per agent by current sort position
+        let mut next_order: BTreeMap<String, i32> = BTreeMap::new();
+        for c in &mut self.categories {
+            let n = next_order.entry(c.agent.clone()).or_insert(0);
+            c.order = *n;
+            *n += 1;
+        }
     }
 
     /// Rename a category by id (O(1), no todo changes needed).
@@ -202,6 +277,11 @@ impl Store {
             .collect();
         cats.sort_by_key(|c| c.order);
         cats
+    }
+
+    /// All categories regardless of agent (used by recovery/reporting).
+    pub fn list_categories_all(&self) -> Vec<Category> {
+        self.categories.clone()
     }
 
     /// Apply a partial update to a todo. Records `updated` history entry.

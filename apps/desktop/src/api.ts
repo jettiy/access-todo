@@ -4,6 +4,7 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 const BASE = (import.meta.env.VITE_API_BASE as string) || "http://127.0.0.1:7878";
+export const API_BASE = BASE;
 
 // Tauri 창 label이 에이전트 식별자 (hermes/omp/zcode/user).
 // dev 환경(브라우저)에서는 URL 쿼리 ?agent= 사용.
