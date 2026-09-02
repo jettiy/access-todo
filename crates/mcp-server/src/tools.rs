@@ -6,10 +6,9 @@
 use serde_json::Value;
 
 /// Base URL for the Access REST API.
-///
 /// Defaults to `http://127.0.0.1:7878` but can be overridden via the
 /// `ACCESS_API_BASE` env var (used by tests with a mock server).
-fn api_base() -> String {
+pub fn api_base() -> String {
     std::env::var("ACCESS_API_BASE").unwrap_or_else(|_| "http://127.0.0.1:7878".into())
 }
 
@@ -33,11 +32,15 @@ fn id_of(args: &Value) -> anyhow::Result<String> {
         .ok_or_else(|| anyhow::anyhow!("id required"))
 }
 
-/// Execute a tool call by forwarding it to the REST API.
-pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
+/// Execute a tool call by forwarding it to the Access REST API at `base`.
+///
+/// `base` is the API root (e.g. `http://127.0.0.1:7878`). The caller is
+/// responsible for resolving it — typically from `ACCESS_API_BASE` in
+/// `main.rs`, or injected directly in tests so parallel test cases no
+/// longer race on a process-wide env var.
+pub async fn dispatch(base: &str, call: ToolCall) -> anyhow::Result<Value> {
     let agent = agent_of(&call.arguments);
     let client = reqwest::Client::new();
-    let base = api_base();
 
     Ok(match call.name.as_str() {
         "list_todos" => {

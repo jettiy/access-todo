@@ -52,6 +52,12 @@ pub struct Todo {
     pub title: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
+    /// Work-completion summary recorded by `complete_todo(summary=...)`.
+    /// Stays separate from `note` so the user's freeform note is preserved
+    /// verbatim and the post-it / review endpoint can show the summary
+    /// without a "✓ " prefix leak.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
     pub done: bool,
     pub priority: Priority,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -70,6 +76,15 @@ pub struct Todo {
     pub updated_at: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub updated_by: Option<String>,
+    /// Tombstone marker. When set, the todo is considered deleted: read
+    /// paths filter it out, but the row stays in the doc so other replicas
+    /// can learn about the deletion via the merge step (which lets the
+    /// newest `deleted_at` win). Use [`Store::prune_tombstones`] to
+    /// eventually garbage-collect cold tombstones.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deleted_by: Option<String>,
     #[serde(default)]
     pub history: Vec<HistoryEntry>,
 }

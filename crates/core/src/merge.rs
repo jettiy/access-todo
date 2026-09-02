@@ -11,10 +11,16 @@ use chrono::{DateTime, Utc};
 
 use crate::model::{Category, Todo, TodoDoc};
 
-/// Effective change timestamp for a todo: `updated_at` if set, else
-/// `created_at`, else the Unix epoch (oldest possible).
+/// Effective change timestamp for a todo: `deleted_at` (tombstone) wins
+/// first so a deletion always supersedes an older edit, then `updated_at`,
+/// then `created_at`, then the Unix epoch. This is what lets deletes
+/// propagate through merge — without it, a tombstone would lose to a
+/// stale pre-deletion copy on the other replica.
 fn ts(t: &Todo) -> DateTime<Utc> {
-    t.updated_at.or(Some(t.created_at)).unwrap_or(DateTime::UNIX_EPOCH)
+    t.deleted_at
+        .or(t.updated_at)
+        .or(Some(t.created_at))
+        .unwrap_or(DateTime::UNIX_EPOCH)
 }
 
 /// Effective change timestamp for a category: `updated_at` if set, else epoch.

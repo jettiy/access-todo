@@ -9,6 +9,21 @@ use chrono::Utc;
 use crate::error::{CoreError, Result};
 use crate::model::{new_cat_id, new_id, Category, HistoryEntry, Priority, Todo, TodoDoc};
 
+/// Maximum number of history entries kept per todo. Older entries are
+/// dropped on every push so a heavily-toggled todo can't grow unboundedly
+/// (and bloat the Gist payload past GitHub's 1 MB file limit).
+pub const MAX_HISTORY: usize = 50;
+
+/// Append `entry` to `history`, then trim to the newest [`MAX_HISTORY`]
+/// entries. Keeps the audit trail useful without letting it grow forever.
+fn push_history(history: &mut Vec<HistoryEntry>, entry: HistoryEntry) {
+    history.push(entry);
+    let cutoff = history.len().saturating_sub(MAX_HISTORY);
+    if cutoff > 0 {
+        history.drain(0..cutoff);
+    }
+}
+
 /// Input for creating a new todo.
 #[derive(Debug, Clone, Default)]
 pub struct TodoInput {
@@ -19,6 +34,51 @@ pub struct TodoInput {
     pub tags: Vec<String>,
     pub category_id: Option<String>,
 }
+
+/// Per-field limits enforced by [`TodoInput::validate`] / [`TodoPatch::validate`].
+pub const MAX_TITLE_LEN: usize = 200;
+pub const MAX_NOTE_LEN: usize = 4000;
+
+impl TodoInput {
+    /// Validate the input, normalizing `title` (trim) in place. Returns
+    /// the first violation as a human-readable string so callers can map
+    /// it to a 422 body. Empty/whitespace titles, oversized fields, and
+    /// malformed `due_date` (must be `YYYY-MM-DD`) are rejected.
+    pub fn validate(&mut self) -> std::result::Result<(), String> {
+        self.title = self.title.trim().to_string();
+        if self.title.is_empty() {
+            return Err("title must not be empty".into());
+        }
+        if self.title.chars().count() > MAX_TITLE_LEN {
+            return Err(format!("title must be ≤ {MAX_TITLE_LEN} chars"));
+        }
+        if let Some(n) = self.note.as_ref() {
+            if n.chars().count() > MAX_NOTE_LEN {
+                return Err(format!("note must be ≤ {MAX_NOTE_LEN} chars"));
+            }
+        }
+        if let Some(dd) = self.due_date.as_ref() {
+            if !is_valid_yyyy_mm_dd(dd) {
+                return Err("due_date must be YYYY-MM-DD".into());
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Cheap `YYYY-MM-DD` shape check (does not validate the actual date —
+/// `2026-13-45` would pass. We only need to keep obvious garbage out;
+/// full calendar validation is the client's job).
+fn is_valid_yyyy_mm_dd(s: &str) -> bool {
+    let b = s.as_bytes();
+    b.len() == 10
+        && b[4] == b'-'
+        && b[7] == b'-'
+        && b[..4].iter().all(|c| c.is_ascii_digit())
+        && b[5..7].iter().all(|c| c.is_ascii_digit())
+        && b[8..10].iter().all(|c| c.is_ascii_digit())
+}
+
 
 /// Partial update for a todo. `None` means "leave unchanged"; for the
 /// nullable `note`/`due_date`/`category_id` fields use `Some(None)` to clear.
@@ -45,8 +105,21 @@ impl Store {
         Self::default()
     }
 
-    /// Return a snapshot of all todos.
+    /// Iterate over non-deleted todos (tombstones filtered out). All public
+    /// read paths go through this so soft-deleted rows stay invisible to
+    /// clients while still being carried in the doc for sync.
+    fn iter_active(&self) -> impl Iterator<Item = &Todo> {
+        self.todos.iter().filter(|t| t.deleted_at.is_none())
+    }
+
+    /// Return a snapshot of all todos (excluding tombstones).
     pub fn list(&self) -> Vec<Todo> {
+        self.iter_active().cloned().collect()
+    }
+
+    /// Return all todos including tombstones — used by sync/merge so
+    /// deletions propagate. Most callers want [`Store::list`] instead.
+    pub fn list_with_tombstones(&self) -> Vec<Todo> {
         self.todos.clone()
     }
 
@@ -55,15 +128,19 @@ impl Store {
     /// machine's local timezone, so we compare against the local date.
     pub fn list_today(&self) -> Vec<Todo> {
         let today = chrono::Local::now().date_naive().format("%Y-%m-%d").to_string();
-        self.todos
-            .iter()
+        self.iter_active()
             .filter(|t| t.due_date.as_deref() == Some(&today) && !t.done)
             .cloned()
             .collect()
     }
 
-    /// Return a single todo by id, if present.
+    /// Return a single todo by id, if present and not deleted.
     pub fn get(&self, id: &str) -> Option<Todo> {
+        self.iter_active().find(|t| t.id == id).cloned()
+    }
+
+    /// Return a todo by id even if soft-deleted (for tombstone-aware code).
+    pub fn get_with_tombstone(&self, id: &str) -> Option<Todo> {
         self.todos.iter().find(|t| t.id == id).cloned()
     }
 
@@ -74,6 +151,9 @@ impl Store {
             id: new_id(),
             title: i.title,
             note: i.note,
+            summary: None,
+            deleted_at: None,
+            deleted_by: None,
             done: false,
             priority: i.priority,
             due_date: i.due_date,
@@ -191,7 +271,7 @@ impl Store {
         }
         t.updated_at = Some(now);
         t.updated_by = Some(actor.into());
-        t.history.push(HistoryEntry {
+        push_history(&mut t.history, HistoryEntry {
             action: "updated".into(),
             at: now,
             by: actor.into(),
@@ -218,7 +298,7 @@ impl Store {
         }
         t.updated_at = Some(now);
         t.updated_by = Some(actor.into());
-        t.history.push(HistoryEntry {
+        push_history(&mut t.history, HistoryEntry {
             action: action.into(),
             at: now,
             by: actor.into(),
@@ -227,8 +307,11 @@ impl Store {
     }
 
     /// Mark a todo done and record a work summary (what was done).
-    /// The summary replaces the note with a "✓ <summary>" prefix and is
-    /// appended to history so the post-it shows what changed.
+    ///
+    /// The summary is written to the dedicated `summary` field so the
+    /// user's `note` is preserved verbatim, and the same text is appended
+    /// to `history` for audit. Re-completing overwrites the previous
+    /// summary (latest completion wins).
     pub fn complete_with_summary(
         &mut self,
         id: &str,
@@ -246,15 +329,8 @@ impl Store {
         t.completed_by = Some(actor.into());
         t.updated_at = Some(now);
         t.updated_by = Some(actor.into());
-        // 요약을 note에 기록 (기존 note 보존)
-        let prev_note = t.note.take().unwrap_or_default();
-        let combined = if prev_note.is_empty() {
-            format!("✓ {summary}")
-        } else {
-            format!("{prev_note}\n✓ {summary}")
-        };
-        t.note = Some(combined);
-        t.history.push(HistoryEntry {
+        t.summary = Some(summary.into());
+        push_history(&mut t.history, HistoryEntry {
             action: format!("completed: {summary}"),
             at: now,
             by: actor.into(),
@@ -262,21 +338,48 @@ impl Store {
         Ok(t.clone())
     }
 
-    /// Delete a todo by id.
-    pub fn delete(&mut self, id: &str, _actor: &str) -> Result<()> {
-        let before = self.todos.len();
-        self.todos.retain(|t| t.id != id);
-        if self.todos.len() == before {
-            return Err(CoreError::NotFound(id.into()));
-        }
-        Ok(())
+    /// Soft-delete a todo by id. The row is kept in the doc as a tombstone
+    /// (with `deleted_at` / `deleted_by` set) so the deletion can propagate
+    /// to other replicas via merge. [`Store::list`] / [`Store::get`] hide
+    /// it from clients; use [`Store::prune_tombstones`] to actually free
+    /// the memory after the deletion has had time to sync.
+    pub fn delete(&mut self, id: &str, actor: &str) -> Result<Todo> {
+        let now = Utc::now();
+        let t = self
+            .todos
+            .iter_mut()
+            .find(|t| t.id == id)
+            .ok_or_else(|| CoreError::NotFound(id.into()))?;
+        t.deleted_at = Some(now);
+        t.deleted_by = Some(actor.into());
+        t.updated_at = Some(now);
+        t.updated_by = Some(actor.into());
+        push_history(&mut t.history, HistoryEntry {
+            action: "deleted".into(),
+            at: now,
+            by: actor.into(),
+        });
+        Ok(t.clone())
     }
 
-    /// Case-insensitive search across title, note, and tags.
+    /// Permanently drop tombstones older than `older_than`. Returns the
+    /// number of rows pruned. Safe to call periodically once you're
+    /// confident every replica has pulled past the deletion.
+    pub fn prune_tombstones(&mut self, older_than: chrono::Duration) -> usize {
+        let cutoff = Utc::now() - older_than;
+        let before = self.todos.len();
+        self.todos.retain(|t| {
+            // keep if not deleted, or if deleted but still warmer than cutoff
+            t.deleted_at.map_or(true, |d| d > cutoff)
+        });
+        before - self.todos.len()
+    }
+
+    /// Case-insensitive search across title, note, and tags (tombstones
+    /// excluded).
     pub fn search(&self, q: &str) -> Vec<Todo> {
         let ql = q.to_lowercase();
-        self.todos
-            .iter()
+        self.iter_active()
             .filter(|t| {
                 t.title.to_lowercase().contains(&ql)
                     || t.note

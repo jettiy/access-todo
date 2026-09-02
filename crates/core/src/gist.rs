@@ -3,7 +3,7 @@
 //! Stores and retrieves the `todos.json` file in a single secret gist.
 
 use reqwest::header::{
-    HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, ETAG, IF_NONE_MATCH,
+    HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, ETAG, IF_MATCH, IF_NONE_MATCH,
 };
 use serde::Deserialize;
 
@@ -20,6 +20,17 @@ struct GistResp {
 #[derive(Deserialize)]
 struct GistFile {
     content: String,
+}
+
+/// Outcome of a conditional fetch.
+///
+/// `NotModified` means the server returned 304 against our last ETag —
+/// callers should keep their local state untouched and skip merging.
+pub enum FetchResult {
+    /// The remote document changed; here is the new state (and ETag, if any).
+    Modified { doc: TodoDoc, etag: Option<String> },
+    /// The remote is unchanged since the supplied ETag. No body to merge.
+    NotModified { etag: Option<String> },
 }
 
 /// HTTP client for a GitHub Gist containing `todos.json`.
@@ -59,9 +70,15 @@ impl GistClient {
         h
     }
 
-    /// Fetch the gist and parse `todos.json`. Returns the document and the
-    /// ETag (if the server provided one) for subsequent conditional requests.
-    pub async fn fetch(&self, gist_id: &str, etag: Option<&str>) -> Result<(TodoDoc, Option<String>)> {
+    /// Fetch the gist and parse `todos.json`. Returns a [`FetchResult`] so
+    /// the caller can distinguish a real change from a cache hit (304) and
+    /// skip the merge work in the latter case. `etag` enables conditional
+    /// requests via `If-None-Match`.
+    pub async fn fetch(
+        &self,
+        gist_id: &str,
+        etag: Option<&str>,
+    ) -> Result<FetchResult> {
         let mut extra = HeaderMap::new();
         if let Some(e) = etag {
             extra.insert(IF_NONE_MATCH, HeaderValue::from_str(e)?);
@@ -78,9 +95,8 @@ impl GistClient {
             .and_then(|v| v.to_str().ok())
             .map(|s| s.to_string());
         let status = resp.status();
-        // 304 Not Modified: 캐시가 유효하므로 빈 문서 반환 (호출자가 로컬 유지)
         if status == reqwest::StatusCode::NOT_MODIFIED {
-            return Ok((TodoDoc::new("cache-hit"), etag_out));
+            return Ok(FetchResult::NotModified { etag: etag_out });
         }
         let body = resp
             .json::<GistResp>()
@@ -93,15 +109,19 @@ impl GistClient {
             .content
             .clone();
         let doc: TodoDoc = serde_json::from_str(&content)?;
-        Ok((doc, etag_out))
+        Ok(FetchResult::Modified { doc, etag: etag_out })
     }
 
-    /// Push (PATCH) the document to the gist. Returns the new ETag if any.
+    /// Push (PATCH) the document to the gist with optimistic-concurrency
+    /// control: when an `etag` is supplied it is sent as `If-Match`, so a
+    /// concurrent remote change yields `412 Precondition Failed` →
+    /// [`CoreError::Conflict`] instead of silently clobbering the remote.
+    /// Returns the new ETag if any.
     pub async fn push(
         &self,
         gist_id: &str,
         doc: &TodoDoc,
-        _etag: Option<&str>,
+        etag: Option<&str>,
     ) -> Result<Option<String>> {
         let payload = serde_json::json!({
             "files": {
@@ -110,10 +130,20 @@ impl GistClient {
                 }
             }
         });
+        let mut extra = HeaderMap::new();
+        if let Some(e) = etag {
+            // If-Match lets the server reject the write when the remote has
+            // moved on since we last fetched. Empty string is never a valid
+            // etag — guard against it so we don't send a header that always
+            // fails.
+            if !e.is_empty() {
+                extra.insert(IF_MATCH, HeaderValue::from_str(e)?);
+            }
+        }
         let resp = self
             .http
             .patch(format!("{}/gists/{}", self.base, gist_id))
-            .headers(self.auth_headers(HeaderMap::new()))
+            .headers(self.auth_headers(extra))
             .json(&payload)
             .send()
             .await?;
@@ -122,10 +152,15 @@ impl GistClient {
             .get(ETAG)
             .and_then(|v| v.to_str().ok())
             .map(|s| s.to_string());
-        if !resp.status().is_success() {
-            let s = resp.status();
+        let status = resp.status();
+        if status == reqwest::StatusCode::PRECONDITION_FAILED {
+            // Drain the body so the connection can be reused.
+            let _ = resp.text().await;
+            return Err(CoreError::Conflict);
+        }
+        if !status.is_success() {
             let t = resp.text().await.unwrap_or_default();
-            return Err(CoreError::GistHttp(format!("push {s}: {t}")));
+            return Err(CoreError::GistHttp(format!("push {status}: {t}")));
         }
         Ok(etag_out)
     }

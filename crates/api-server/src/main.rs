@@ -13,13 +13,20 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or(7878);
 
     let state = AppState::with_gist_from_env();
-    // Pull initial state from the Gist on startup.
+    // Restore from local cache first (covers no-Gist and Gist-unreachable
+    // cases). If a Gist is configured, the pull below will overwrite with
+    // the canonical remote state.
+    if let Err(e) = state.load_local_cache().await {
+        eprintln!("warn: local cache load failed: {e}");
+    }
+    // Pull initial state from the Gist on startup (if configured).
     if let Err(e) = state.pull("api-server").await {
         eprintln!("warn: initial Gist pull failed: {e}");
     } else if state.sync.is_some() {
         println!("Synced from Gist on startup.");
     }
-
+    // Start the debounced Gist flusher (no-op if neither Gist nor cache).
+    state.clone().spawn_flusher();
     let app = router(state);
     // 기본은 127.0.0.1 (localhost 전용). TODO_BIND=0.0.0.0 으로 WSL/네트워크 접근 허용.
     let host: std::net::IpAddr = std::env::var("TODO_BIND")

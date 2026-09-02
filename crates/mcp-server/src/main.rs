@@ -1,7 +1,7 @@
 //! MCP stdio server: reads line-delimited JSON-RPC 2.0 from stdin, writes
 //! responses to stdout. Forwards all tool calls to the Access REST API.
 
-use mcp_server::tools::{dispatch, tool_catalog, ToolCall};
+use mcp_server::tools::{api_base, dispatch, tool_catalog, ToolCall};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 #[tokio::main]
@@ -40,7 +40,8 @@ async fn main() -> anyhow::Result<()> {
                     .and_then(|p| p.get("arguments"))
                     .cloned()
                     .unwrap_or_default();
-                match dispatch((), ToolCall { name, arguments }).await {
+                let base = api_base();
+                match dispatch(&base, ToolCall { name, arguments }).await {
                     Ok(v) => serde_json::json!({
                         "content": [ { "type": "text", "text": serde_json::to_string_pretty(&v).unwrap_or_default() } ]
                     }),

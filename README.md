@@ -18,7 +18,10 @@ Claude (MCP) ────┤
 - **카테고리** — 각 포스트잇 안에 프로젝트별 카테고리 (생성/rename/삭제/순서변경/접기)
 - **에이전트 작업 추적** — 모든 변경이 `created_by`/`completed_by`/`history`로 기록
 - **작업 요약 자동 기록** — 에이전트가 작업 완료 시 `complete_todo(summary="...")`로 무엇을 했는지 기록
-- **GitHub Gist 동기화** — 단일 진실 공급원, ETag 기반 충돌 제어, 3-way 머지
+- **GitHub Gist 동기화** — 단일 진실 공급원, `If-Match` ETag 기반 충돌 감지(412 시 pull→merge→재시도), 3-way 머지, **소프트 삭제(tombstone)** 로 삭제 동기화 보장
+- **debounced push** — 여러 mutation이 1.5초 윈도우에서 한 번의 Gist PATCH로 통합 (rate limit 보호)
+- **로컬 캐시 fallback** — `GITHUB_TOKEN` 없이 실행 시 플랫폼 데이터 디렉토리에 JSON 캐시 → 재시작 시 복원
+- **검증 + RFC 7807 problem-details** — title/note/due_date 검증, 실패 시 `application/problem+json` 본문
 - **안드로이드 앱** — Kotlin/Compose + Glance 홈 위젯
 - **항상 위 토글** — 각 창마다 📌 버튼으로 always-on-top 켜기/끄기
 
@@ -47,9 +50,8 @@ npm install && npm run build
 cd src-tauri && cargo run --release --features custom-protocol
 ```
 
-### 테스트
 ```bash
-cargo test --workspace  # 코어 19개 + API + MCP 테스트
+cargo test --workspace  # core 32 + API 13 + MCP 4 = 총 49개 테스트
 ```
 
 ## 📁 프로젝트 구조
@@ -59,7 +61,7 @@ access/
 ├── crates/
 │   ├── core/           # TODO Store + Category + Gist 동기화 + 3-way 머지
 │   ├── api-server/     # REST API (axum, localhost:7878)
-│   └── mcp-server/     # MCP 서버 (9개 도구, REST API 전달)
+│   └── mcp-server/     # MCP 서버 (12개 도구, REST API 전달)
 ├── apps/
 │   └── desktop/        # Tauri 포스트잇 (4개 창, Svelte)
 ├── android/            # Kotlin/Compose 안드로이드 앱
@@ -85,18 +87,22 @@ access/
 }
 ```
 
-**사용 가능한 도구 (9개):**
+**사용 가능한 도구 (12개):**
 
 | 도구 | 설명 |
 |------|------|
 | `list_todos` | 에이전트별 할 일 + 카테고리 조회 |
 | `get_today_todos` | 오늘 할 일 |
+| `get_todo` | 단일 할 일 상세 조회 (id) |
 | `add_todo` | 할 일 추가 (`category_id` 선택) |
+| `add_todos_batch` | 여러 할 일 일괄 등록 (온보딩) |
 | `update_todo` | 할 일 수정 |
 | `toggle_todo` | 체크 토글 |
 | `complete_todo` | **체크 + 작업 요약 기록** ★ |
 | `delete_todo` | 할 일 삭제 |
 | `search_todos` | 키워드 검색 |
+| `create_category` | 카테고리 생성 |
+| `access_review` | **진행상황 종합 요약** ★ |
 
 ### Hermes Agent (REST)
 
@@ -157,7 +163,10 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 }
 ```
 
-**동기화:** Gist ETag 기반 낙관적 동시성, 항목 ID 기준 3-way 머지
+- **삭제 동기화:** tombstone(`deleted_at`) 기반. 삭제 시 vec에서 제거하지 않고 마킹 → 머지 시 가장 최신 타임스탬프가 이겨 다른 replica에 삭제가 전파됨. `prune_tombstones(Duration)` 로 일정 기간 후 실제 제거.
+- **동시성/읽기 확장성:** `Arc<RwLock<Store>>` 로 다중 읽기 동시 실행. mutation은 `mark_push_pending()` 으로 동기 I/O 없이 즉시 반환, 백그라운드 flusher가 debounced push.
+- **동기화:** `If-Match` ETag 기반 optimistic concurrency. push 시 412 Precondition Failed가 뜨면 자동으로 pull→3-way 머지 후 재시도 (최대 3회). 동시 수정 시 마지막 컨픽트는 `synced: false`로 클라이언트에 노출.
+- **요약 분리:** `complete_todo(summary=...)` 는 `summary` 필드에만 기록. 사용자 `note`는 보존.
 
 ## 📄 라이선스
 

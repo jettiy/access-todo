@@ -1,8 +1,9 @@
 //! Integration tests for MCP tool dispatch.
 //!
 //! Spins up a mock HTTP server (wiremock) that imitates the Access REST
-//! API, points `dispatch` at it via `ACCESS_API_BASE`, and verifies each
-//! tool call produces the correct HTTP request and propagates the response.
+//! API, then calls `dispatch` with the server's URL injected directly.
+//! Each test owns its own mock server, so cases can run fully in parallel
+//! without racing on a process-wide env var.
 
 use mcp_server::tools::{dispatch, ToolCall};
 use serde_json::json;
@@ -12,7 +13,6 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 #[tokio::test]
 async fn add_todo_via_dispatch() {
     let server = MockServer::start().await;
-    std::env::set_var("ACCESS_API_BASE", &server.uri());
 
     Mock::given(method("POST"))
         .and(path("/todos"))
@@ -31,7 +31,7 @@ async fn add_todo_via_dispatch() {
         .await;
 
     let out = dispatch(
-        (),
+        server.uri().as_str(),
         ToolCall {
             name: "add_todo".into(),
             arguments: json!({ "title": "테스트", "agent": "zcode" }),
@@ -41,14 +41,11 @@ async fn add_todo_via_dispatch() {
     .unwrap();
     assert_eq!(out["id"], json!("abc-123"));
     assert_eq!(out["created_by"], "zcode");
-
-    std::env::remove_var("ACCESS_API_BASE");
 }
 
 #[tokio::test]
 async fn list_todos_via_dispatch() {
     let server = MockServer::start().await;
-    std::env::set_var("ACCESS_API_BASE", &server.uri());
 
     Mock::given(method("GET"))
         .and(path("/todos"))
@@ -63,7 +60,7 @@ async fn list_todos_via_dispatch() {
         .await;
 
     let out = dispatch(
-        (),
+        server.uri().as_str(),
         ToolCall {
             name: "list_todos".into(),
             arguments: json!({}),
@@ -72,17 +69,14 @@ async fn list_todos_via_dispatch() {
     .await
     .unwrap();
     assert_eq!(out["todos"].as_array().unwrap().len(), 2);
-
-    std::env::remove_var("ACCESS_API_BASE");
 }
 
 #[tokio::test]
 async fn unknown_tool_errors() {
     let server = MockServer::start().await;
-    std::env::set_var("ACCESS_API_BASE", &server.uri());
 
     let res = dispatch(
-        (),
+        server.uri().as_str(),
         ToolCall {
             name: "bogus".into(),
             arguments: json!({}),
@@ -90,6 +84,32 @@ async fn unknown_tool_errors() {
     )
     .await;
     assert!(res.is_err());
+}
 
-    std::env::remove_var("ACCESS_API_BASE");
+#[tokio::test]
+async fn list_todos_filters_by_agent_when_provided() {
+    // agent 인수가 있으면 ?agent=<name> 쿼리로 필터링해야 한다.
+    let server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/todos"))
+        .and(wiremock::matchers::query_param("agent", "hermes"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "todos": [{ "id": "h1", "title": "hermes-only", "done": false }],
+            "categories": [],
+        })))
+        .mount(&server)
+        .await;
+
+    let out = dispatch(
+        server.uri().as_str(),
+        ToolCall {
+            name: "list_todos".into(),
+            arguments: json!({ "agent": "hermes" }),
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(out["todos"].as_array().unwrap().len(), 1);
+    assert_eq!(out["todos"][0]["title"], json!("hermes-only"));
 }

@@ -1,0 +1,30 @@
+{
+  "project": { "id": "access-todo", "name": "Access (에이전트 정리 가이드 시스템)" },
+  "categories": ["코어/동기화", "API/MCP 서버", "위젯/안드로이드", "문서/인프라"],
+  "starter_todos": [
+    {
+      "title": "Gist 동기화 3-way 머지 회귀 테스트 보강",
+      "priority": "medium",
+      "category": "코어/동기화",
+      "note": "core 크레이트 머지 로직 엣지케이스(동시 항목 삭제/수정) 테스트 추가"
+    },
+    {
+      "title": "API 서버 헬스체크/메트릭 엔드포인트 추가",
+      "priority": "low",
+      "category": "API/MCP 서버",
+      "note": "/health 확장 — Gist ETag 상태, 동기화 지연, 활성 에이전트 노출"
+    },
+    {
+      "title": "포스트잇 창 위치 영속화",
+      "priority": "medium",
+      "category": "위젯/안드로이드",
+      "note": "사용자가이드 FAQ에 '재시작 시 기본 위치로 복귀(추후 개선)'로 남아있음"
+    },
+    {
+      "title": "문서 도구 수/경로 정합성 유지 (12개 도구)",
+      "priority": "low",
+      "category": "문서/인프라",
+      "note": "README/AGENTS/skill/연결가이드 도구 수(12)·bin 경로 정합성 주기적 점검"
+    }
+  ]
+}

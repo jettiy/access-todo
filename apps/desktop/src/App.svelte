@@ -207,7 +207,7 @@
                   <span class="prio">{pEmoji(t.priority)}</span>
                   <span class="content">
                     <span class="ttl">{t.title}</span>
-                    {#if t.note}<span class="note">{t.note.startsWith("✓") ? "✅" : "📝"} {t.note}</span>{/if}
+                    {#if t.summary}<span class="note">✅ {t.summary}</span>{:else if t.note}<span class="note">📝 {t.note}</span>{/if}
                   </span>
                   <button class="del" on:click={() => remove(t.id)}>×</button>
                 </label>
@@ -232,7 +232,7 @@
                   <span class="prio">{pEmoji(t.priority)}</span>
                   <span class="content">
                     <span class="ttl">{t.title}</span>
-                    {#if t.note}<span class="note">{t.note.startsWith("✓") ? "✅" : "📝"} {t.note}</span>{/if}
+                    {#if t.summary}<span class="note">✅ {t.summary}</span>{:else if t.note}<span class="note">📝 {t.note}</span>{/if}
                   </span>
                   <button class="del" on:click={() => remove(t.id)}>×</button>
                 </label>

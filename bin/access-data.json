@@ -1,0 +1,1316 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-09-02T03:55:00.418851Z",
+  "updated_by": "recover",
+  "todos": [
+    {
+      "id": "01c52505-b075-4d3a-ade9-955fc2040378",
+      "title": "wind: rembg 파이프라인 완성",
+      "done": false,
+      "priority": "low",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-afe30d06-02b4-4457-bd0e-002e9c4ee02e",
+      "created_at": "2026-07-06T23:45:16.534519600Z",
+      "created_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:45:16.534519600Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "04d09fef-7aa1-40f7-8c93-7b4e0ebf552e",
+      "title": "Tauri 4개 창 포스트잇 위젯",
+      "note": "✓ hermes/omp/zcode/user 2x2 그리드, 드래그/닫기/항상위/색상",
+      "done": true,
+      "priority": "high",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-1b34cccd-382f-4057-b1c3-e9afe1a5fb89",
+      "created_at": "2026-07-06T23:45:00.837587700Z",
+      "created_by": "zcode",
+      "completed_at": "2026-07-06T23:45:01.789445400Z",
+      "completed_by": "zcode",
+      "updated_at": "2026-07-06T23:45:01.789445400Z",
+      "updated_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:45:00.837587700Z",
+          "by": "zcode"
+        },
+        {
+          "action": "completed: hermes/omp/zcode/user 2x2 그리드, 드래그/닫기/항상위/색상",
+          "at": "2026-07-06T23:45:01.789445400Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "04f91eb5-7710-4252-a822-365032e5f7c2",
+      "title": "주간 프로젝트 진행상황 리뷰",
+      "note": "매주 금요일 우선순위 재조정",
+      "done": false,
+      "priority": "medium",
+      "tags": [
+        "agent:common"
+      ],
+      "created_at": "2026-07-06T20:17:00.653507900Z",
+      "created_by": "user",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T20:17:00.653507900Z",
+          "by": "user"
+        }
+      ]
+    },
+    {
+      "id": "08795c36-7b8c-4813-b6f5-6dc6471bf265",
+      "title": "Access 시스템 전수 점검 (API/Gist/MCP/포스트잇)",
+      "note": "✓ API /health 200, Gist 실제 라운드트립 검증(23 todos·30 history), MCP·포스트잇 구동 확인, 4에이전트 연동 문서화 완료. git clean·빌드 8종 완료 상태 확인",
+      "done": true,
+      "priority": "medium",
+      "tags": [
+        "agent:omp"
+      ],
+      "category_id": "cat-787b1d95-3adc-4a67-827f-47c4277fd6c1",
+      "created_at": "2026-07-07T00:33:29.866359400Z",
+      "created_by": "omp",
+      "completed_at": "2026-07-07T00:34:06.792614800Z",
+      "completed_by": "omp",
+      "updated_at": "2026-07-07T00:34:06.792614800Z",
+      "updated_by": "omp",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:33:29.866359400Z",
+          "by": "omp"
+        },
+        {
+          "action": "completed: API /health 200, Gist 실제 라운드트립 검증(23 todos·30 history), MCP·포스트잇 구동 확인, 4에이전트 연동 문서화 완료. git clean·빌드 8종 완료 상태 확인",
+          "at": "2026-07-07T00:34:06.792614800Z",
+          "by": "omp"
+        }
+      ]
+    },
+    {
+      "id": "1aea9e7f-e6d9-4b88-b5c8-5c0d3e81dc8e",
+      "title": "browser-use 프로토타입",
+      "done": false,
+      "priority": "low",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-fd02b268-e52e-4eae-aabe-dc6b373923b7",
+      "created_at": "2026-07-06T23:45:15.005542900Z",
+      "created_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:45:15.005542900Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "1c1a73d2-a038-4f52-8544-75595d1b98f2",
+      "title": "Navbar use-before-declare TDZ 재정렬",
+      "note": "✓ closeMobileMenu useCallback을 사용 effect 위로 이동. use-before-declare(TDZ)·memoization 경고 동시 해결, deps에 closeMobileMenu 추가",
+      "done": true,
+      "priority": "medium",
+      "tags": [
+        "agent:omp"
+      ],
+      "category_id": "cat-61357ddc-ed56-47d7-88c7-cd6b942b68bc",
+      "created_at": "2026-07-07T00:33:27.718175300Z",
+      "created_by": "omp",
+      "completed_at": "2026-07-07T00:34:14.314203900Z",
+      "completed_by": "omp",
+      "updated_at": "2026-07-07T00:34:14.314203900Z",
+      "updated_by": "omp",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:33:27.718175300Z",
+          "by": "omp"
+        },
+        {
+          "action": "completed: closeMobileMenu useCallback을 사용 effect 위로 이동. use-before-declare(TDZ)·memoization 경고 동시 해결, deps에 closeMobileMenu 추가",
+          "at": "2026-07-07T00:34:14.314203900Z",
+          "by": "omp"
+        }
+      ]
+    },
+    {
+      "id": "1d420ffb-89ac-4b94-9d3b-4fb868af45af",
+      "title": "K-STONKS fresh 빌드 배포 + 부팅 검증",
+      "note": "✓ 592파일·폰트포함 fresh 빌드→Desktop 배포(이전본 백업). 직업선택→메인차트 부팅 성공(사용자 확인)",
+      "done": false,
+      "priority": "medium",
+      "tags": [
+        "agent:omp"
+      ],
+      "category_id": "cat-ca22965f-7373-43c4-b88c-013de3423a74",
+      "created_at": "2026-07-07T00:33:23.562037200Z",
+      "created_by": "omp",
+      "updated_at": "2026-07-07T10:18:59.533815Z",
+      "updated_by": "omp",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:33:23.562037200Z",
+          "by": "omp"
+        },
+        {
+          "action": "completed: 592파일·폰트포함 fresh 빌드→Desktop 배포(이전본 백업). 직업선택→메인차트 부팅 성공(사용자 확인)",
+          "at": "2026-07-07T00:34:11.127915500Z",
+          "by": "omp"
+        },
+        {
+          "action": "unchecked",
+          "at": "2026-07-07T10:18:59.533815Z",
+          "by": "omp"
+        }
+      ]
+    },
+    {
+      "id": "20ed69f8-52bb-4a8c-8b26-b3c410b7c6eb",
+      "title": "챗봇 응답 품질 개선",
+      "done": false,
+      "priority": "low",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-7513549c-978c-4895-a63a-afbd18917e46",
+      "created_at": "2026-07-06T23:45:12.851256700Z",
+      "created_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:45:12.851256700Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "22667273-c2f6-4242-a850-75ebcd20e221",
+      "title": "job_select.lua jc nil 크래시 해결",
+      "note": "✓ jc 전역→local 수정 확인(75·157·320줄 모두 local jc 선행). luac 통과",
+      "done": true,
+      "priority": "high",
+      "tags": [
+        "agent:omp"
+      ],
+      "category_id": "cat-ca22965f-7373-43c4-b88c-013de3423a74",
+      "created_at": "2026-07-07T00:33:21.304861800Z",
+      "created_by": "omp",
+      "completed_at": "2026-07-07T00:34:08.963157300Z",
+      "completed_by": "omp",
+      "updated_at": "2026-07-07T00:34:08.963157300Z",
+      "updated_by": "omp",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:33:21.304861800Z",
+          "by": "omp"
+        },
+        {
+          "action": "completed: jc 전역→local 수정 확인(75·157·320줄 모두 local jc 선행). luac 통과",
+          "at": "2026-07-07T00:34:08.963157300Z",
+          "by": "omp"
+        }
+      ]
+    },
+    {
+      "id": "29365d50-4935-4404-815c-1f505f1d44d8",
+      "title": "ai-signal-talk: 채팅 전송 방식 확정",
+      "note": "WebSocket vs HTTP polling 결정하고 고정",
+      "done": false,
+      "priority": "high",
+      "tags": [
+        "agent:hermes"
+      ],
+      "category_id": "cat-dd6d1bed-667e-4d3b-ae90-4514c7fb5ae2",
+      "created_at": "2026-07-07T00:37:01.385847600Z",
+      "created_by": "hermes",
+      "updated_at": "2026-07-07T01:03:09.394315800Z",
+      "updated_by": "hermes",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:37:01.385847600Z",
+          "by": "hermes"
+        },
+        {
+          "action": "updated",
+          "at": "2026-07-07T00:55:27.199205Z",
+          "by": "hermes"
+        },
+        {
+          "action": "updated",
+          "at": "2026-07-07T00:55:28.649915400Z",
+          "by": "hermes"
+        },
+        {
+          "action": "updated",
+          "at": "2026-07-07T00:55:53.235403500Z",
+          "by": "hermes"
+        },
+        {
+          "action": "updated",
+          "at": "2026-07-07T00:55:54.349533800Z",
+          "by": "hermes"
+        },
+        {
+          "action": "updated",
+          "at": "2026-07-07T00:55:55.375075300Z",
+          "by": "hermes"
+        },
+        {
+          "action": "updated",
+          "at": "2026-07-07T01:03:07.879081300Z",
+          "by": "hermes"
+        },
+        {
+          "action": "updated",
+          "at": "2026-07-07T01:03:09.394315800Z",
+          "by": "hermes"
+        }
+      ]
+    },
+    {
+      "id": "305bf5fb-b5e1-4786-8bf0-676a41a409b8",
+      "title": "1단계-B: 오프라인 보상 정산 + 세이브 모델",
+      "note": "미접속 시간 압축 정산(최대 12h), UTC 타임스탬프, JSON 직렬화 세이브 모델.\n✓ OfflineSimulator(12시간 상한, 실전투 로직 재사용 고속 정산, Preview/Apply 분리) + PlayerSave(UTC 틱, 영웅/파티/재화). 오프라인 정산 테스트 3종 포함 전체 24테스트 통과. 밸런스 리포트: 1일차 벽 10페이지→2일차 29페이지 진행 리듬 확인.",
+      "done": true,
+      "priority": "high",
+      "tags": [
+        "phase-1",
+        "agent:zcode"
+      ],
+      "created_at": "2026-08-17T17:28:00.013724100Z",
+      "created_by": "zcode",
+      "completed_at": "2026-08-17T17:46:11.290956400Z",
+      "completed_by": "zcode",
+      "updated_at": "2026-08-17T17:46:11.290956400Z",
+      "updated_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-08-17T17:28:00.013724100Z",
+          "by": "zcode"
+        },
+        {
+          "action": "completed: OfflineSimulator(12시간 상한, 실전투 로직 재사용 고속 정산, Preview/Apply 분리) + PlayerSave(UTC 틱, 영웅/파티/재화). 오프라인 정산 테스트 3종 포함 전체 24테스트 통과. 밸런스 리포트: 1일차 벽 10페이지→2일차 29페이지 진행 리듬 확인.",
+          "at": "2026-08-17T17:46:11.290956400Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "39917450-ef87-493c-ad0c-a791cdcd2955",
+      "title": "StockTycoon: IPO 매니저 로직 검토",
+      "done": false,
+      "priority": "low",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-afe30d06-02b4-4457-bd0e-002e9c4ee02e",
+      "created_at": "2026-07-06T23:45:15.694430800Z",
+      "created_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:45:15.694430800Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "3b739c9b-0eaf-4bd1-b224-a3b5405d5757",
+      "title": "백엔드: 시그널 룰 엔진 API 완성",
+      "note": "미사용 라우트 정리 후 기능 구현",
+      "done": false,
+      "priority": "medium",
+      "tags": [
+        "agent:hermes"
+      ],
+      "category_id": "cat-dd6d1bed-667e-4d3b-ae90-4514c7fb5ae2",
+      "created_at": "2026-07-07T00:37:03.744725600Z",
+      "created_by": "hermes",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:37:03.744725600Z",
+          "by": "hermes"
+        }
+      ]
+    },
+    {
+      "id": "43ff41fc-edfb-44c1-9dfa-8fb6a68dc9fc",
+      "title": "SSE 실시간 테스트",
+      "done": false,
+      "priority": "high",
+      "tags": [
+        "agent:user"
+      ],
+      "created_at": "2026-08-14T23:56:27.853539300Z",
+      "created_by": "user",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-08-14T23:56:27.853539300Z",
+          "by": "user"
+        }
+      ]
+    },
+    {
+      "id": "44676d64-48d7-4c06-993b-b72adaf342d8",
+      "title": "구현 로드맵 Phase 1 시작",
+      "done": false,
+      "priority": "medium",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-fd02b268-e52e-4eae-aabe-dc6b373923b7",
+      "created_at": "2026-07-06T23:45:13.971199700Z",
+      "created_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:45:13.971199700Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "48be4946-420f-4a22-b71a-310b645d0d28",
+      "title": "평문 GitHub PAT 보안 처리 (Access시작.bat)",
+      "note": "Access시작.bat에 GitHub PAT 평문 하드코딩(ghp_SKG5…). 설계 사양 §11 위반. OS 자격증명/환경변수 이관 + 토큰 폐기·재발급 필요\n✓ 평문 토큰을 .access-secrets.cmd(ACL USER-PC 전용)로 분리, Access시작.bat에서 제거(call 방식). 로드 검증(ghp_ prefix). ※토큰 값 자체 노출 이력 있어 폐기·재발급(사용자 액션) 권장",
+      "done": true,
+      "priority": "high",
+      "tags": [
+        "agent:omp"
+      ],
+      "category_id": "cat-787b1d95-3adc-4a67-827f-47c4277fd6c1",
+      "created_at": "2026-07-07T00:33:19.300142900Z",
+      "created_by": "omp",
+      "completed_at": "2026-07-07T00:45:54.774225100Z",
+      "completed_by": "omp",
+      "updated_at": "2026-07-07T00:45:54.774225100Z",
+      "updated_by": "omp",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:33:19.300142900Z",
+          "by": "omp"
+        },
+        {
+          "action": "completed: 평문 토큰을 .access-secrets.cmd(ACL USER-PC 전용)로 분리, Access시작.bat에서 제거(call 방식). 로드 검증(ghp_ prefix). ※토큰 값 자체 노출 이력 있어 폐기·재발급(사용자 액션) 권장",
+          "at": "2026-07-07T00:45:54.774225100Z",
+          "by": "omp"
+        }
+      ]
+    },
+    {
+      "id": "49121d07-ffcb-44d8-976d-65aadd513439",
+      "title": "main.lua H nil 크래시 수정",
+      "note": "✓ main.lua drawChart H nil 크래시 해결: 소스 이미 수정됨(bare H→L.H·local W,H). luac 통과, fresh 빌드 배포, 직업선택→메인차트 부팅 성공 확인",
+      "done": true,
+      "priority": "high",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-98b3e74b-063c-48e5-b553-33dfa8aa5e4f",
+      "created_at": "2026-07-06T23:45:10.900654400Z",
+      "created_by": "zcode",
+      "completed_at": "2026-07-07T00:04:32.988450800Z",
+      "completed_by": "omp",
+      "updated_at": "2026-07-07T00:04:32.988450800Z",
+      "updated_by": "omp",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:45:10.900654400Z",
+          "by": "zcode"
+        },
+        {
+          "action": "checked",
+          "at": "2026-07-06T23:52:30.205324Z",
+          "by": "zcode"
+        },
+        {
+          "action": "unchecked",
+          "at": "2026-07-06T23:52:31.254599600Z",
+          "by": "zcode"
+        },
+        {
+          "action": "completed: main.lua drawChart H nil 크래시 해결: 소스 이미 수정됨(bare H→L.H·local W,H). luac 통과, fresh 빌드 배포, 직업선택→메인차트 부팅 성공 확인",
+          "at": "2026-07-07T00:04:32.988450800Z",
+          "by": "omp"
+        }
+      ]
+    },
+    {
+      "id": "52d2e391-ee96-47de-8104-543bcbfc83bf",
+      "title": "unescaped-entities 4줄 곡형따옴표 처리",
+      "note": "✓ currency·gear·feedback JSX 한글 인용구 '→' 곡형따옴표 4줄 변환. lint 통과",
+      "done": true,
+      "priority": "low",
+      "tags": [
+        "agent:omp"
+      ],
+      "category_id": "cat-61357ddc-ed56-47d7-88c7-cd6b942b68bc",
+      "created_at": "2026-07-07T00:33:28.845791400Z",
+      "created_by": "omp",
+      "completed_at": "2026-07-07T00:34:15.229364100Z",
+      "completed_by": "omp",
+      "updated_at": "2026-07-07T00:34:15.229364100Z",
+      "updated_by": "omp",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:33:28.845791400Z",
+          "by": "omp"
+        },
+        {
+          "action": "completed: currency·gear·feedback JSX 한글 인용구 '→' 곡형따옴표 4줄 변환. lint 통과",
+          "at": "2026-07-07T00:34:15.229364100Z",
+          "by": "omp"
+        }
+      ]
+    },
+    {
+      "id": "57852dce-05a8-44d8-a3ef-92451965339a",
+      "title": "0단계: 개발 환경 구축 (.NET SDK + Unity Hub/Editor)",
+      "note": "진행 상황: .NET SDK 8 설치 완료(winget). 안드로이드 SDK/에뮬레이터/AVD(postit-avd)/JDK17 사전 준비 상태 확인. 남은 것: Unity Hub + Unity 6 LTS 설치(사용자 GUI 작업 - 로그인/무료 개인 라이선스).",
+      "done": false,
+      "priority": "high",
+      "tags": [
+        "phase-0",
+        "agent:zcode"
+      ],
+      "created_at": "2026-08-17T17:28:00.013704100Z",
+      "created_by": "zcode",
+      "updated_at": "2026-08-17T17:46:20.549702800Z",
+      "updated_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-08-17T17:28:00.013704100Z",
+          "by": "zcode"
+        },
+        {
+          "action": "updated",
+          "at": "2026-08-17T17:46:20.549702800Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "5cffcbd3-1c6f-4034-9c42-4b24cf86452c",
+      "title": "백엔드: 어드민 콘솔 권한 검증 강화",
+      "note": "RBAC BASIC/PENDING/PRO/ADMIN",
+      "done": false,
+      "priority": "low",
+      "tags": [
+        "agent:hermes"
+      ],
+      "category_id": "cat-dd6d1bed-667e-4d3b-ae90-4514c7fb5ae2",
+      "created_at": "2026-07-07T00:37:04.880423100Z",
+      "created_by": "hermes",
+      "updated_at": "2026-07-07T10:19:02.304368400Z",
+      "updated_by": "hermes",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:37:04.880423100Z",
+          "by": "hermes"
+        },
+        {
+          "action": "checked",
+          "at": "2026-07-07T10:19:00.975754300Z",
+          "by": "hermes"
+        },
+        {
+          "action": "unchecked",
+          "at": "2026-07-07T10:19:02.304368400Z",
+          "by": "hermes"
+        }
+      ]
+    },
+    {
+      "id": "6660a273-ab2f-4f33-9638-7afbcab19482",
+      "title": "MCP 서버 구축 (9개 도구)",
+      "note": "✓ JSON-RPC stdio, REST API 전달 방식, category_id 지원",
+      "done": true,
+      "priority": "high",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-1b34cccd-382f-4057-b1c3-e9afe1a5fb89",
+      "created_at": "2026-07-06T23:44:59.196106800Z",
+      "created_by": "zcode",
+      "completed_at": "2026-07-06T23:45:00.021680600Z",
+      "completed_by": "zcode",
+      "updated_at": "2026-07-06T23:45:00.021680600Z",
+      "updated_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:44:59.196106800Z",
+          "by": "zcode"
+        },
+        {
+          "action": "completed: JSON-RPC stdio, REST API 전달 방식, category_id 지원",
+          "at": "2026-07-06T23:45:00.021680600Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "67e16c3c-dd2e-4eac-9976-b4d0ed9fc2ec",
+      "title": "Access 시스템 안정화 모니터링",
+      "note": "Gist 동기화, MCP 연결 상태 점검",
+      "done": false,
+      "priority": "medium",
+      "tags": [
+        "agent:common"
+      ],
+      "created_at": "2026-07-06T20:16:59.796120700Z",
+      "created_by": "user",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T20:16:59.796120700Z",
+          "by": "user"
+        }
+      ]
+    },
+    {
+      "id": "742a2d6f-f45d-40a6-b841-bc8383de3140",
+      "title": "실시간 테스트 - 5초 내 보여야 함",
+      "done": false,
+      "priority": "high",
+      "tags": [
+        "agent:user"
+      ],
+      "created_at": "2026-07-07T02:12:12.767958500Z",
+      "created_by": "user",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T02:12:12.767958500Z",
+          "by": "user"
+        }
+      ]
+    },
+    {
+      "id": "74376024-fcca-4cc2-aa17-86908588d5db",
+      "title": "Obsidian Vault 정리",
+      "note": "빈 볼트 - 노트 이식 계획",
+      "done": false,
+      "priority": "low",
+      "tags": [
+        "agent:user"
+      ],
+      "created_at": "2026-07-06T20:17:11.764867200Z",
+      "created_by": "user",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T20:17:11.764867200Z",
+          "by": "user"
+        }
+      ]
+    },
+    {
+      "id": "757d4023-9382-4efd-ab96-eceec6e29c50",
+      "title": "REST API 서버 구축",
+      "note": "✓ axum 기반 7878 포트, X-Agent 추적, CORS, complete 엔드포인트",
+      "done": true,
+      "priority": "high",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-1b34cccd-382f-4057-b1c3-e9afe1a5fb89",
+      "created_at": "2026-07-06T23:44:57.926848100Z",
+      "created_by": "zcode",
+      "completed_at": "2026-07-06T23:44:58.453654300Z",
+      "completed_by": "zcode",
+      "updated_at": "2026-07-06T23:44:58.453654300Z",
+      "updated_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:44:57.926848100Z",
+          "by": "zcode"
+        },
+        {
+          "action": "completed: axum 기반 7878 포트, X-Agent 추적, CORS, complete 엔드포인트",
+          "at": "2026-07-06T23:44:58.453654300Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "76d14427-4831-49c9-b3b3-48e2148f2e4d",
+      "title": "1단계-A: 순수 C# 전투 시뮬레이터 코어 (dotnet 테스트 가능)",
+      "note": "netstandard2.1 클래스 라이브러리 + xunit 테스트 프로젝트. 틱 기반 전투, 5인 파티, 웨이브, 스킬 쿨타임, 스테이지 진행, 골드/잉크 드랍. Unity 의존 없음.\n✓ core/DoodleKnights.Core (netstandard2.1, Unity 의존 없음): 틱 기반 BattleSimulator(결정론 시드, 이벤트 로그), DamageCalculator(소프트 방어 공식), GameData(영웅 6종+몬스터+보스 3종), StageGenerator/StageRunner(페이지 진행+부분 보상), GameSession(파밍 폴백 정책). xunit 24개 전부 통과. 커밋 bdd2bf1.",
+      "done": true,
+      "priority": "high",
+      "tags": [
+        "phase-1",
+        "agent:zcode"
+      ],
+      "created_at": "2026-08-17T17:28:00.013719200Z",
+      "created_by": "zcode",
+      "completed_at": "2026-08-17T17:46:10.289827300Z",
+      "completed_by": "zcode",
+      "updated_at": "2026-08-17T17:46:10.289827300Z",
+      "updated_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-08-17T17:28:00.013719200Z",
+          "by": "zcode"
+        },
+        {
+          "action": "completed: core/DoodleKnights.Core (netstandard2.1, Unity 의존 없음): 틱 기반 BattleSimulator(결정론 시드, 이벤트 로그), DamageCalculator(소프트 방어 공식), GameData(영웅 6종+몬스터+보스 3종), StageGenerator/StageRunner(페이지 진행+부분 보상), GameSession(파밍 폴백 정책). xunit 24개 전부 통과. 커밋 bdd2bf1.",
+          "at": "2026-08-17T17:46:10.289827300Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "7f29a5c8-9c97-4ad8-ae47-d6855191ae36",
+      "title": "/returning a→Link 변환 3곳 (SPA/SEO)",
+      "note": "✓ currency·gear·videos 의 /returning a→Link 변환 + next/link import 추가. SPA네비게이션·SEO 개선",
+      "done": true,
+      "priority": "medium",
+      "tags": [
+        "agent:omp"
+      ],
+      "category_id": "cat-61357ddc-ed56-47d7-88c7-cd6b942b68bc",
+      "created_at": "2026-07-07T00:33:26.651071200Z",
+      "created_by": "omp",
+      "completed_at": "2026-07-07T00:34:13.235413900Z",
+      "completed_by": "omp",
+      "updated_at": "2026-07-07T00:34:13.235413900Z",
+      "updated_by": "omp",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:33:26.651071200Z",
+          "by": "omp"
+        },
+        {
+          "action": "completed: currency·gear·videos 의 /returning a→Link 변환 + next/link import 추가. SPA네비게이션·SEO 개선",
+          "at": "2026-07-07T00:34:13.235413900Z",
+          "by": "omp"
+        }
+      ]
+    },
+    {
+      "id": "7fd6e9cf-2d28-462b-9ad2-4f090e1a5717",
+      "title": "main.lua H 크래시",
+      "note": "1867줄",
+      "done": false,
+      "priority": "high",
+      "tags": [
+        "agent:zcode"
+      ],
+      "created_at": "2026-07-07T00:34:42.895916Z",
+      "created_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:34:42.895916Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "81e4ed9a-ebef-44b1-bff4-184d16ea4ea1",
+      "title": "오프라인 전용 테스트",
+      "done": false,
+      "priority": "medium",
+      "tags": [
+        "agent:user"
+      ],
+      "created_at": "2026-08-14T23:56:41.225929500Z",
+      "created_by": "user",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-08-14T23:56:41.225929500Z",
+          "by": "user"
+        }
+      ]
+    },
+    {
+      "id": "84d30734-bb26-4eea-9415-9a9ed1a75e17",
+      "title": "main.lua UTF-8 디코딩 에러 (2차, 데이터 기반)",
+      "note": "string.sub 절단 아님, 데이터 기반(특정 종목명 바이트). 부팅차단 아님, 플레이 중 재현 시 처리\n✓ 근본원인: npc_system.lua 2720/2728줄 note:sub(1,30) 바이트 잘라내기가 한글(3바이트) 중간 hit → 불완전 UTF-8. U.utf8Sub/U.utf8Len char-safe로 수정. luac 통과, 재빌드 배포. minigame 잘라내기는 숫자입력라 안전",
+      "done": true,
+      "priority": "low",
+      "tags": [
+        "agent:omp"
+      ],
+      "category_id": "cat-ca22965f-7373-43c4-b88c-013de3423a74",
+      "created_at": "2026-07-07T00:33:24.639125100Z",
+      "created_by": "omp",
+      "completed_at": "2026-07-07T00:45:55.887166900Z",
+      "completed_by": "omp",
+      "updated_at": "2026-07-07T00:45:55.887166900Z",
+      "updated_by": "omp",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:33:24.639125100Z",
+          "by": "omp"
+        },
+        {
+          "action": "completed: 근본원인: npc_system.lua 2720/2728줄 note:sub(1,30) 바이트 잘라내기가 한글(3바이트) 중간 hit → 불완전 UTF-8. U.utf8Sub/U.utf8Len char-safe로 수정. luac 통과, 재빌드 배포. minigame 잘라내기는 숫자입력라 안전",
+          "at": "2026-07-07T00:45:55.887166900Z",
+          "by": "omp"
+        }
+      ]
+    },
+    {
+      "id": "86a8a6d3-b79c-46fc-b99e-60d98a32f73c",
+      "title": "에이전트 종료 시 자동 정리",
+      "note": "✓ Access-감시.ps1 백그라운드 프로세스 폴링",
+      "done": true,
+      "priority": "low",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-1b34cccd-382f-4057-b1c3-e9afe1a5fb89",
+      "created_at": "2026-07-06T23:45:08.085819400Z",
+      "created_by": "zcode",
+      "completed_at": "2026-07-06T23:45:09.083640Z",
+      "completed_by": "zcode",
+      "updated_at": "2026-07-06T23:45:09.083640Z",
+      "updated_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:45:08.085819400Z",
+          "by": "zcode"
+        },
+        {
+          "action": "completed: Access-감시.ps1 백그라운드 프로세스 폴링",
+          "at": "2026-07-06T23:45:09.083640Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "890fb510-8bff-4478-86f9-210eb910a75f",
+      "title": "job_select.lua nil 수정",
+      "note": "51줄 jc nil",
+      "done": false,
+      "priority": "high",
+      "tags": [
+        "agent:zcode"
+      ],
+      "created_at": "2026-07-07T00:34:42.895897700Z",
+      "created_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:34:42.895897700Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "93970f7e-f738-4a8f-b2b6-beb8d19e6656",
+      "title": "테스트",
+      "done": false,
+      "priority": "medium",
+      "tags": [],
+      "created_at": "2026-07-07T00:49:58.990158700Z",
+      "created_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:49:58.990158700Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "a67854e7-2f34-4098-9049-1fd6536a5d8d",
+      "title": "Access 코어 시스템 구축 (Rust + Gist 동기화)",
+      "note": "✓ core/store/merge/gist 크레이트 구현, 19개 테스트 통과",
+      "done": true,
+      "priority": "high",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-1b34cccd-382f-4057-b1c3-e9afe1a5fb89",
+      "created_at": "2026-07-06T23:44:56.423303Z",
+      "created_by": "zcode",
+      "completed_at": "2026-07-06T23:44:57.182305600Z",
+      "completed_by": "zcode",
+      "updated_at": "2026-07-06T23:44:57.182305600Z",
+      "updated_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:44:56.423303Z",
+          "by": "zcode"
+        },
+        {
+          "action": "completed: core/store/merge/gist 크레이트 구현, 19개 테스트 통과",
+          "at": "2026-07-06T23:44:57.182305600Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "a8e70d49-7950-49e0-97fc-96d0c45adf0e",
+      "title": "job_select.lua nil 버그 수정",
+      "note": "✓ job_select.lua jc nil 크래시 해결: 소스 이미 수정됨(전역 jc→local, 75·157·320줄). luac 통과, 현재 소스 fresh 빌드(592파일)→Desktop 배포, 부팅 성공 확인",
+      "done": true,
+      "priority": "high",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-98b3e74b-063c-48e5-b553-33dfa8aa5e4f",
+      "created_at": "2026-07-06T23:45:10.180590Z",
+      "created_by": "zcode",
+      "completed_at": "2026-07-07T00:04:31.976598400Z",
+      "completed_by": "omp",
+      "updated_at": "2026-07-07T00:04:31.976598400Z",
+      "updated_by": "omp",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:45:10.180590Z",
+          "by": "zcode"
+        },
+        {
+          "action": "completed: job_select.lua jc nil 크래시 해결: 소스 이미 수정됨(전역 jc→local, 75·157·320줄). luac 통과, 현재 소스 fresh 빌드(592파일)→Desktop 배포, 부팅 성공 확인",
+          "at": "2026-07-07T00:04:31.976598400Z",
+          "by": "omp"
+        }
+      ]
+    },
+    {
+      "id": "ad94bd62-c285-4665-98e5-bad04754a4c6",
+      "title": "1단계-C: Unity 프로젝트 생성 + 코어 연결 (사용자 GUI 작업 동반)",
+      "note": "사용자가 Unity Hub 로그인/라이선스 활성화 후 에디터 설치. 프로젝트 생성 후 core를 로컬 패키지로 연결.",
+      "done": false,
+      "priority": "medium",
+      "tags": [
+        "phase-1",
+        "agent:zcode"
+      ],
+      "created_at": "2026-08-17T17:28:00.013729Z",
+      "created_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-08-17T17:28:00.013729Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "b5109730-9680-4520-85c6-ac0efc44b2b4",
+      "title": "차트 최적화",
+      "done": false,
+      "priority": "medium",
+      "tags": [
+        "agent:zcode"
+      ],
+      "created_at": "2026-07-07T00:34:42.895917700Z",
+      "created_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:34:42.895917700Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "b7cbac8c-dd5c-493d-8866-3aafb6014358",
+      "title": "main.lua drawChart H nil 크래시 해결",
+      "note": "✓ drawChart bare H→L.H·local W,H 수정 확인(drawNewsPopup·drawNPCEventPopup도 local W,H 선언). luac 통과",
+      "done": true,
+      "priority": "high",
+      "tags": [
+        "agent:omp"
+      ],
+      "category_id": "cat-ca22965f-7373-43c4-b88c-013de3423a74",
+      "created_at": "2026-07-07T00:33:22.385715700Z",
+      "created_by": "omp",
+      "completed_at": "2026-07-07T00:34:10.026931500Z",
+      "completed_by": "omp",
+      "updated_at": "2026-07-07T00:34:10.026931500Z",
+      "updated_by": "omp",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:33:22.385715700Z",
+          "by": "omp"
+        },
+        {
+          "action": "completed: drawChart bare H→L.H·local W,H 수정 확인(drawNewsPopup·drawNPCEventPopup도 local W,H 선언). luac 통과",
+          "at": "2026-07-07T00:34:10.026931500Z",
+          "by": "omp"
+        }
+      ]
+    },
+    {
+      "id": "b7dd0ecc-8928-4e53-abf5-4579180b5fe2",
+      "title": "에이전트 연동 (ZCode/OMP/Hermes)",
+      "note": "✓ MCP 등록 + REST skill + 자동 체크 지시문 + 작업 요약",
+      "done": true,
+      "priority": "high",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-1b34cccd-382f-4057-b1c3-e9afe1a5fb89",
+      "created_at": "2026-07-06T23:45:04.300463500Z",
+      "created_by": "zcode",
+      "completed_at": "2026-07-06T23:45:05.110232500Z",
+      "completed_by": "zcode",
+      "updated_at": "2026-07-06T23:45:05.110232500Z",
+      "updated_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:45:04.300463500Z",
+          "by": "zcode"
+        },
+        {
+          "action": "completed: MCP 등록 + REST skill + 자동 체크 지시문 + 작업 요약",
+          "at": "2026-07-06T23:45:05.110232500Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "bedfefa9-48c2-4552-9502-8c1645cdfa50",
+      "title": "ai-signal-talk: 인증 프록시 Phase 4 테스트",
+      "note": "NextAuth + 토큰 디자인 시스템",
+      "done": false,
+      "priority": "medium",
+      "tags": [
+        "agent:hermes"
+      ],
+      "category_id": "cat-dd6d1bed-667e-4d3b-ae90-4514c7fb5ae2",
+      "created_at": "2026-07-07T00:37:02.536161200Z",
+      "created_by": "hermes",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:37:02.536161200Z",
+          "by": "hermes"
+        }
+      ]
+    },
+    {
+      "id": "c5e9feac-f3b0-4f5e-8998-b8d2d62fee6b",
+      "title": "시즌5 업데이트 페이지 검수",
+      "note": "✓ 시즌5 페이지 검수 완료: 빌드 27라우트 green. lint 에러 20→5 감소 — 실질 버그 15개 수정(/returning a→Link 3곳 SPA네비+SEO, Navbar use-before-declare TDZ 재정렬, unescaped-entities 4줄 곡형따옴표). 잔존 5개는 React19 set-state-in-effect 정상 패턴. SSG 렌더링 27페이지 정상",
+      "done": true,
+      "priority": "medium",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-7513549c-978c-4895-a63a-afbd18917e46",
+      "created_at": "2026-07-06T23:45:11.742718Z",
+      "created_by": "zcode",
+      "completed_at": "2026-07-07T00:21:28.676673900Z",
+      "completed_by": "omp",
+      "updated_at": "2026-07-07T00:21:28.676673900Z",
+      "updated_by": "omp",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:45:11.742718Z",
+          "by": "zcode"
+        },
+        {
+          "action": "completed: 시즌5 페이지 검수 완료: 빌드 27라우트 green. lint 에러 20→5 감소 — 실질 버그 15개 수정(/returning a→Link 3곳 SPA네비+SEO, Navbar use-before-declare TDZ 재정렬, unescaped-entities 4줄 곡형따옴표). 잔존 5개는 React19 set-state-in-effect 정상 패턴. SSG 렌더링 27페이지 정상",
+          "at": "2026-07-07T00:21:28.676673900Z",
+          "by": "omp"
+        }
+      ]
+    },
+    {
+      "id": "c88287fb-dfda-4d44-b904-e7d92dc891b4",
+      "title": "1단계-E: 에뮬레이터 빌드/테스트 (android-dev 워크플로우)",
+      "note": "안드로이드 에뮬레이터(postit-avd)에 설치해 30초 플레이 성장 체감 확인 — 1단계 완료 기준.",
+      "done": false,
+      "priority": "medium",
+      "tags": [
+        "phase-1",
+        "agent:zcode"
+      ],
+      "created_at": "2026-08-17T17:28:00.013739Z",
+      "created_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-08-17T17:28:00.013739Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "c8dbf3ed-35e1-4e53-87cf-0340a7a72741",
+      "title": "카테고리 시스템",
+      "note": "✓ ID 참조 방식, rename/reorder, Gist 머지, UI 섹션",
+      "done": true,
+      "priority": "medium",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-1b34cccd-382f-4057-b1c3-e9afe1a5fb89",
+      "created_at": "2026-07-06T23:45:06.097711100Z",
+      "created_by": "zcode",
+      "completed_at": "2026-07-06T23:45:07.005257300Z",
+      "completed_by": "zcode",
+      "updated_at": "2026-07-06T23:45:07.005257300Z",
+      "updated_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:45:06.097711100Z",
+          "by": "zcode"
+        },
+        {
+          "action": "completed: ID 참조 방식, rename/reorder, Gist 머지, UI 섹션",
+          "at": "2026-07-06T23:45:07.005257300Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "d33e0458-3342-415d-b447-c1623e50883f",
+      "title": "1단계-D: Unity 렌더링/UI — 전투 화면 (세로)",
+      "note": "모눈종이 배경, 도트 파티 렌더링, 하단 성장 UI, 재화 상단바. android-emulator MCP로 APK 설치/스크린샷 검증.",
+      "done": false,
+      "priority": "medium",
+      "tags": [
+        "phase-1",
+        "agent:zcode"
+      ],
+      "created_at": "2026-08-17T17:28:00.013734300Z",
+      "created_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-08-17T17:28:00.013734300Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "d6caa218-494f-4a54-89bb-5e1a3dfee795",
+      "title": "시즌5 빌드 27라우트 green 검증",
+      "note": "✓ Next16 Turbopack 27라우트 SSG 생성·TypeScript 통과. lint 에러로 빌드 차단 안 됨 확인",
+      "done": true,
+      "priority": "medium",
+      "tags": [
+        "agent:omp"
+      ],
+      "category_id": "cat-61357ddc-ed56-47d7-88c7-cd6b942b68bc",
+      "created_at": "2026-07-07T00:33:25.670268700Z",
+      "created_by": "omp",
+      "completed_at": "2026-07-07T00:34:12.172378500Z",
+      "completed_by": "omp",
+      "updated_at": "2026-07-07T00:34:12.172378500Z",
+      "updated_by": "omp",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:33:25.670268700Z",
+          "by": "omp"
+        },
+        {
+          "action": "completed: Next16 Turbopack 27라우트 SSG 생성·TypeScript 통과. lint 에러로 빌드 차단 안 됨 확인",
+          "at": "2026-07-07T00:34:12.172378500Z",
+          "by": "omp"
+        }
+      ]
+    },
+    {
+      "id": "f43e2e2b-d02f-44bc-9e34-33f8c59ba103",
+      "title": "안드로이드 Kotlin/Compose 앱",
+      "note": "✓ Gist 직접 동기화, WorkManager, Glance 홈 위젯, 에뮬레이터 실행 확인",
+      "done": true,
+      "priority": "medium",
+      "tags": [
+        "agent:zcode"
+      ],
+      "category_id": "cat-1b34cccd-382f-4057-b1c3-e9afe1a5fb89",
+      "created_at": "2026-07-06T23:45:02.603533800Z",
+      "created_by": "zcode",
+      "completed_at": "2026-07-06T23:52:33.340950400Z",
+      "completed_by": "zcode",
+      "updated_at": "2026-07-06T23:52:33.340950400Z",
+      "updated_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-06T23:45:02.603533800Z",
+          "by": "zcode"
+        },
+        {
+          "action": "completed: Gist 직접 동기화, WorkManager, Glance 홈 위젯, 에뮬레이터 실행 확인",
+          "at": "2026-07-06T23:45:03.432185200Z",
+          "by": "zcode"
+        },
+        {
+          "action": "unchecked",
+          "at": "2026-07-06T23:52:32.295941600Z",
+          "by": "zcode"
+        },
+        {
+          "action": "checked",
+          "at": "2026-07-06T23:52:33.340950400Z",
+          "by": "zcode"
+        }
+      ]
+    },
+    {
+      "id": "fd0aca7d-36c3-4efc-b716-7de76e0d9d1c",
+      "title": "OMP 포스트잇 빈 화면 진단·수정 (agent 필터)",
+      "note": "✓ 포스트잇 agent 필터(tags agent:omp OR created_by + omp 카테고리) 원인 파악. omp 카테고리·투두 0개가 빈 화면 원인 → omp 전용 카테고리·투두 등록으로 해결",
+      "done": true,
+      "priority": "medium",
+      "tags": [
+        "agent:omp"
+      ],
+      "category_id": "cat-787b1d95-3adc-4a67-827f-47c4277fd6c1",
+      "created_at": "2026-07-07T00:33:18.294111700Z",
+      "created_by": "omp",
+      "completed_at": "2026-07-07T00:34:07.878210200Z",
+      "completed_by": "omp",
+      "updated_at": "2026-07-07T00:34:07.878210200Z",
+      "updated_by": "omp",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-07-07T00:33:18.294111700Z",
+          "by": "omp"
+        },
+        {
+          "action": "completed: 포스트잇 agent 필터(tags agent:omp OR created_by + omp 카테고리) 원인 파악. omp 카테고리·투두 0개가 빈 화면 원인 → omp 전용 카테고리·투두 등록으로 해결",
+          "at": "2026-07-07T00:34:07.878210200Z",
+          "by": "omp"
+        }
+      ]
+    },
+    {
+      "id": "fe2d4f88-4d93-4e9c-a5dc-42456c925d1b",
+      "title": "[목표] 낙서기사단 모바일 방치형 RPG 완성 — 4루프 레이어드, Unity 6, 세로형",
+      "note": "docs/superpowers/specs/2026-08-18-idle-rpg-design.md 커밋 완료(d0e0fb4). 유니티6 LTS, 세로 1080x1920, 순수 C# 전투 시뮬레이터 아키텍처.",
+      "done": false,
+      "priority": "high",
+      "tags": [
+        "goal",
+        "agent:zcode"
+      ],
+      "created_at": "2026-08-17T17:27:41.690541100Z",
+      "created_by": "zcode",
+      "history": [
+        {
+          "action": "created",
+          "at": "2026-08-17T17:27:41.690541100Z",
+          "by": "zcode"
+        }
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "id": "cat-1b34cccd-382f-4057-b1c3-e9afe1a5fb89",
+      "agent": "zcode",
+      "name": "Access (이 프로젝트)",
+      "order": 0,
+      "updated_at": "2026-07-06T23:44:52.126852100Z"
+    },
+    {
+      "id": "cat-61357ddc-ed56-47d7-88c7-cd6b942b68bc",
+      "agent": "omp",
+      "name": "dnf-mobile-guide",
+      "order": 0,
+      "updated_at": "2026-07-07T00:32:45.934751300Z"
+    },
+    {
+      "id": "cat-7513549c-978c-4895-a63a-afbd18917e46",
+      "agent": "zcode",
+      "name": "DNF 가이드",
+      "order": 1,
+      "updated_at": "2026-07-06T23:44:54.020361800Z"
+    },
+    {
+      "id": "cat-787b1d95-3adc-4a67-827f-47c4277fd6c1",
+      "agent": "omp",
+      "name": "Access·포스트잇 연동",
+      "order": 1,
+      "updated_at": "2026-07-07T03:10:03.463971500Z"
+    },
+    {
+      "id": "cat-98b3e74b-063c-48e5-b553-33dfa8aa5e4f",
+      "agent": "zcode",
+      "name": "K-STONKS-V2",
+      "order": 2,
+      "updated_at": "2026-07-06T23:52:34.384734400Z"
+    },
+    {
+      "id": "cat-afe30d06-02b4-4457-bd0e-002e9c4ee02e",
+      "agent": "zcode",
+      "name": "기타 프로젝트",
+      "order": 3,
+      "updated_at": "2026-07-06T23:44:55.653021200Z"
+    },
+    {
+      "id": "cat-ca22965f-7373-43c4-b88c-013de3423a74",
+      "agent": "omp",
+      "name": "K-STONKS-V2",
+      "order": 2,
+      "updated_at": "2026-07-07T00:32:44.813037800Z"
+    },
+    {
+      "id": "cat-dd6d1bed-667e-4d3b-ae90-4514c7fb5ae2",
+      "agent": "hermes",
+      "name": "ai-signal-talk",
+      "order": 0,
+      "updated_at": "2026-07-07T00:33:20.292793700Z"
+    },
+    {
+      "id": "cat-fd02b268-e52e-4eae-aabe-dc6b373923b7",
+      "agent": "zcode",
+      "name": "OneClick",
+      "order": 4,
+      "updated_at": "2026-07-06T23:44:54.829719Z"
+    }
+  ],
+  "dev_notes": [
+    {
+      "id": "note-4d33245a-096c-42c6-a7ea-7f7f83c4d7a7",
+      "note_type": "worklog",
+      "title": "2026-08-15 작업 로그",
+      "body": "*총 0개 작업 완료*\n\n",
+      "tags": [],
+      "created_at": "2026-08-15T15:38:40.186059800Z",
+      "created_by": "system"
+    }
+  ]
+}

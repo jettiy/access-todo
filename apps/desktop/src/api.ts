@@ -42,6 +42,7 @@ export interface Todo {
   title: string;
   note?: string | null;
   done: boolean;
+  summary?: string | null;
   priority: Priority;
   due_date?: string | null;
   tags: string[];
@@ -50,6 +51,8 @@ export interface Todo {
   created_by: string;
   completed_at?: string | null;
   completed_by?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
   updated_at?: string | null;
   updated_by?: string | null;
 }

@@ -109,12 +109,13 @@ add_todos_batch(agent="<본인>", todos=[...])
 
 ---
 
-## 🔧 MCP 도구 (13개)
+## 🔧 MCP 도구 (12개)
 
 | 도구 | 설명 |
 |------|------|
 | `list_todos` | 에이전트별 할 일 + 카테고리 조회 |
 | `get_today_todos` | 오늘 할 일 |
+| `get_todo` | 단일 할 일 상세 조회 (id) |
 | `add_todo` | 할 일 추가 (category_id 선택) |
 | `add_todos_batch` | 여러 할 일 일괄 등록 (온보딩) |
 | `update_todo` | 할 일 수정 |
