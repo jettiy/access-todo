@@ -36,3 +36,4 @@ api-offline.log
 api-startup.log
 access-data.json
 backups/
+bin/*.bak_*

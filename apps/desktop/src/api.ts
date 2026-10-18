@@ -27,6 +27,8 @@ export const AGENT_META: Record<string, { emoji: string; title: string; bg: stri
   omp: { emoji: "🛠️", title: "OMP", bg: "#c8e0f5", bgSoft: "#dceaf5", border: "#3c7ab0", text: "#1a3a5a" },
   zcode: { emoji: "⚡", title: "ZCode", bg: "#c8f0e0", bgSoft: "#dcf5ec", border: "#3ca87e", text: "#1a5a44" },
   user: { emoji: "👤", title: "내 할 일", bg: "#fff0a0", bgSoft: "#fff8cc", border: "#b89b00", text: "#5a4a00" },
+  codex: { emoji: "🧠", title: "Codex", bg: "#e0d0f5", bgSoft: "#ede2fa", border: "#7a4ab0", text: "#3a1a5a" },
+  dsh: { emoji: "🐋", title: "DSH", bg: "#ffd8c8", bgSoft: "#ffe8dd", border: "#b06a3c", text: "#5a2a1a" },
 };
 
 export type Priority = "high" | "medium" | "low";

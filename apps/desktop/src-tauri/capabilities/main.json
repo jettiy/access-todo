@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capabilities for all agent post-it windows",
-  "windows": ["hermes", "omp", "zcode", "user", "postit"],
+  "windows": ["hermes", "omp", "zcode", "user", "postit", "devnotes", "codex", "dsh"],
   "permissions": [
     "core:default",
     "core:window:allow-close",

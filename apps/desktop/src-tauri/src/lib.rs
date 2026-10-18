@@ -11,6 +11,8 @@ const AGENT_WINDOWS: &[(&str, &str, f64, f64, &str)] = &[
     ("zcode", "⚡ ZCode", 50.0, 560.0, "#c8f0e0"),
     ("user", "👤 내 할 일", 390.0, 560.0, "#fff0a0"),
     ("devnotes", "📝 게임 개발노트", 730.0, 50.0, "#c8f0e0"),
+    ("codex", "🧠 Codex", 730.0, 560.0, "#e0d0f5"),
+    ("dsh", "🐋 DSH", 1070.0, 50.0, "#ffd8c8"),
 ];
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -33,7 +35,7 @@ pub fn run() {
                     .inner_size(w, h)
                     .position(*x, *y)
                     .decorations(false)
-                    .always_on_top(true)
+                    .always_on_top(*label != "devnotes") // 개발노트 창은 기본적으로 핀 해제
                     .transparent(false)
                     .resizable(true)
                     .skip_taskbar(false)
