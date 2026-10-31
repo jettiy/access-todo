@@ -33,12 +33,15 @@ Pilot (widget) ──┘
 
 ## 🚀 Roadmap
 
+Access is **100% free and open source (MIT) — no paid tier is planned for this project.**
+Commercial follow-ups, if any, will be separate products decided by usage signals.
+
 | Phase | Deliverable | Status |
 |-------|-------------|--------|
 | P0 | Agent skill (`skills/access-todo`) + free marketplace listing | ✅ this release |
-| P1 | First-run wizard: auto-detect agents → one-click MCP registration → toggle settings UI; connection self-healing after agent updates | 🚧 |
+| P1 | First-run settings window: auto-detect agents → toggle to register MCP; connection self-healing after agent updates | 🚧 |
 | P2 | Pilot post-it + `request_pilot` tool + Android push | ⏳ |
-| P3 | Cloud-sync premium (multi-device, $9–15/mo target); core stays MIT & free | ⏳ |
+| P3 | Growth & maintenance — stays free forever | ⏳ |
 
 Support wave (by ecosystem usage ranking): Hermes → Claude Code → Kilo Code → pi → Codex → Cline → Freebuff → omp → OpenClaw → DeepSeek Harness — details in [제품기획_v2_온보딩과상업화.md](docs/제품기획_v2_온보딩과상업화.md).
 
