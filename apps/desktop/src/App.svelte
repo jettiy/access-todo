@@ -132,10 +132,15 @@
     pollTimer = setInterval(refresh, 5000);
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
-    // 실시간: 서버 mutation 즉시 반영 (EventSource는 끊기면 자동 재접속)
+    // 실시간: 서버 mutation 즉시 반영 — SSE 연결 소유자는 hermes 창 하나만.
+    // Chromium 호스트당 6커넥션 제한: 창 수 × SSE가 한도를 초과하면 mutation 후 재조회 fetch가
+    // 소켓 고갈로 실패 → "Failed to fetch" 고착(2026-10-18 실측: 7창 12연결).
+    // 나머지 창은 위 5초 폴링으로 커버된다.
     try {
-      events = new EventSource(`${API_BASE}/events`);
-      events.onmessage = () => refresh();
+      if (AGENT === "hermes") {
+        events = new EventSource(`${API_BASE}/events`);
+        events.onmessage = () => refresh();
+      }
     } catch { /* SSE unavailable → polling covers us */ }
   });
 

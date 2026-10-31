@@ -27,7 +27,18 @@ taskkill /f /im Access-API.exe >nul 2>&1
 
 echo [1/3] API 서버 시작 중... (콘솔 비종속 + 로그 기록)
 powershell -NoProfile -Command "Start-Process -FilePath '%~dp0Access-API.exe' -WorkingDirectory '%~dp0' -WindowStyle Hidden -RedirectStandardOutput '%~dp0api.log' -RedirectStandardError '%~dp0api.err.log'"
-timeout /t 2 /nobreak >nul
+
+REM API 헬스 대기 (최대 30초) — 2초 고정 대기는 경합으로 포스트잇이 Failed to fetch 고착됨(2026-10-18)
+set /a API_WAIT=0
+:wait_api
+curl -s -m 1 http://127.0.0.1:7878/health >nul 2>&1 && goto api_ready
+set /a API_WAIT+=1
+if %API_WAIT% LSS 30 (
+    timeout /t 1 /nobreak >nul
+    goto wait_api
+)
+echo [경고] API 30초 내 미기동 — 포스트잇이 실패 화면으로 뜰 수 있음
+:api_ready
 
 echo [2/3] 포스트잇 4개 창 시작 중...
 start "" "Access-포스트잇.exe"
