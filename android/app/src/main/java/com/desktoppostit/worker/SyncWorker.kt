@@ -3,6 +3,7 @@ package com.desktoppostit.worker
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.desktoppostit.data.PilotNotifier
 import com.desktoppostit.data.TodoRepository
 
 /**
@@ -17,6 +18,8 @@ class SyncWorker(appContext: Context, params: WorkerParameters) :
         if (!repo.isConfigured) return Result.success()
         return try {
             repo.refresh()
+            // P2: 새 파일럿 요청(agent:user + pilot:*)이 있으면 알림
+            PilotNotifier.notifyNewPilotItems(applicationContext, repo.doc.value.todos)
             Result.success()
         } catch (e: Exception) {
             Result.retry()

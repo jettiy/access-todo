@@ -108,9 +108,22 @@ async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   return r.json() as Promise<T>;
 }
 
+export interface LatestSummary {
+  title: string;
+  summary: string;
+  completed_at?: string | null;
+  completed_by?: string | null;
+}
+
+export interface ListResult {
+  todos: Todo[];
+  categories: Category[];
+  latest_summary?: LatestSummary | null;
+}
+
 export const api = {
-  // 자기 에이전트의 할 일 + 카테고리 조회
-  list: () => req<{ todos: Todo[]; categories: Category[] }>(`/todos?agent=${AGENT}`),
+  // 자기 에이전트의 할 일 + 카테고리 (+ 최신 작업 요약) 조회
+  list: () => req<ListResult>(`/todos?agent=${AGENT}`),
   today: () => req<{ todos: Todo[] }>(`/todos/today`),
   add: (title: string, note?: string, priority: Priority = "medium", due_date?: string) =>
     req<Todo>("/todos", { method: "POST", body: JSON.stringify({ title, note, priority, due_date }) }),

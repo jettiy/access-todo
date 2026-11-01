@@ -17,7 +17,7 @@
 @rem Set local scope for the variables with windows NT shell
 if "%OS%"=="Windows_NT" setlocal
 
-set "JAVA_HOME=C:\tools\jdk-17.0.13+11"
+set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
 set "ANDROID_HOME=C:\tools\android-sdk"
 set "ANDROID_SDK_ROOT=C:\tools\android-sdk"
 set "PATH=%JAVA_HOME%\bin;%PATH%"

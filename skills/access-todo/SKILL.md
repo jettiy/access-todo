@@ -87,14 +87,21 @@ The pilot reads your summary on a post-it note. **Max 3 lines, core result first
 Delegate when the action needs manual approval (deploy, payments, account settings),
 physical presence, authority beyond you (legal review, external comms), or a product decision.
 
+**Preferred: `request_pilot`** — routes the item to the pilot's dedicated post-it
+AND sends a phone notification:
+
 ```
-add_todo(title="결제: AWS 크레딧 $50 충전 필요",
-         note="이번 달 한도 초과 예정",
-         priority="high", tags=["agent:user"])
+request_pilot(
+  title="결제: AWS 크레딧 $50 충전 필요",
+  kind="approval",            # approval(수동 승인) | decision(결정 필요) | confirm(확인 요망)
+  reason="이번 달 한도 초과 예정",   # why the pilot must act — 1 line
+  agent="codex")
 ```
 
-`tags=["agent:user"]` routes it to the pilot's dedicated post-it. When you delegate,
-also say it in chat: "등록했습니다: 🔴 AWS 크레딧 충전 — 확인 부탁드립니다."
+Fallback (REST or older MCP builds): `add_todo(title, note=reason, priority="high",
+tags=["agent:user", "pilot:approval"])`.
+
+When you delegate, also say it in chat: "등록했습니다: 🔴 AWS 크레딧 충전 — 확인 부탁드립니다."
 
 ## 6. Security — never do these
 
@@ -108,6 +115,6 @@ also say it in chat: "등록했습니다: 🔴 AWS 크레딧 충전 — 확인 �
 start:    access_review(agent) → list_todos(agent)
 task:     add_todo(agent, title, priority)            # title = project + action
 done:     complete_todo(id, agent, summary)           # ≤3 lines, pilot-level style
-delegate: add_todo(title, tags=["agent:user"], priority)
+delegate: request_pilot(title, kind, reason, agent)   # approval | decision | confirm
 end:      access_review(agent) → report to pilot
 ```

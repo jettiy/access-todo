@@ -458,7 +458,28 @@ async fn list(
     } else {
         vec![]
     };
-    Json(serde_json::json!({ "todos": todos, "categories": categories }))
+    // P2: 최신 작업 요약 — 에이전트 포스트잇 하단에 1~2줄로 표시.
+    // complete_todo의 요약은 note에 "✓" 접두로 저장되므로 가장 최근 완료 항목에서 뽑는다.
+    let latest_summary = if q.agent.is_some() {
+        todos
+            .iter()
+            .filter(|t| {
+                t.done && t.note.as_deref().map(|n| n.starts_with("✓")).unwrap_or(false)
+            })
+            .max_by(|a, b| a.completed_at.cmp(&b.completed_at))
+            .map(|t| {
+                serde_json::json!({
+                    "title": t.title,
+                    "summary": t.note.as_deref().unwrap_or("").trim_start_matches("✓").trim(),
+                    "completed_at": t.completed_at,
+                    "completed_by": t.completed_by,
+                })
+            })
+            .unwrap_or(serde_json::Value::Null)
+    } else {
+        serde_json::Value::Null
+    };
+    Json(serde_json::json!({ "todos": todos, "categories": categories, "latest_summary": latest_summary }))
 }
 
 async fn today(State(s): State<AppState>, h: HeaderMap) -> Json<serde_json::Value> {

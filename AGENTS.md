@@ -73,13 +73,17 @@ summary에는 **무엇을 변경했는지 구체적으로** 작성:
 
 ### 위임 방법
 ```
-add_todo(
+# MCP (권장) — 파일럿 포스트잇 + 폰 알림까지 간다
+request_pilot(
   title="결제: AWS 크레딧 충전 필요",
-  note="이번 달 한도 초과 예정, $50 충전",
-  priority="high",
-  tags=["agent:user"],
-  category_id="<사용자 카테고리>"
+  kind="approval",           # approval(수동 승인) | decision(결정 필요) | confirm(확인 요망)
+  reason="이번 달 한도 초과 예정, $50 충전",
+  agent="<본인>"
 )
+
+# REST 폴백 — tags로 동일하게 라우팅
+POST /todos {"title":"...", "note":"이유 1줄", "priority":"high",
+             "tags":["agent:user","pilot:approval"]}
 ```
 
 ### 위임 시 사용자에게 알림

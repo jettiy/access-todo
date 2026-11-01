@@ -187,6 +187,35 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
                 .json::<Value>().await?;
             r
         }
+        "request_pilot" => {
+            // P2: 파일럿(사용자) 전용 행동 등록 — 파일럿 포스트잇 + 폰 알림으로 간다.
+            // kind: approval(수동 승인) | decision(결정 필요) | confirm(확인 요망)
+            let title = call.arguments["title"]
+                .as_str()
+                .ok_or_else(|| anyhow::anyhow!("title required"))?;
+            let kind = call.arguments
+                .get("kind")
+                .and_then(|v| v.as_str())
+                .unwrap_or("confirm");
+            let mut body = serde_json::json!({
+                "title": title,
+                "priority": call.arguments.get("priority").and_then(|v| v.as_str()).unwrap_or("high"),
+                "tags": ["agent:user", format!("pilot:{kind}")],
+            });
+            if let Some(reason) = call.arguments.get("reason").and_then(|v| v.as_str()) {
+                if !reason.is_empty() {
+                    body["note"] = Value::String(reason.into());
+                }
+            }
+            let r = client
+                .post(format!("{base}/todos"))
+                .header("X-Agent", &agent)
+                .header("Content-Type", "application/json")
+                .json(&body)
+                .send().await?
+                .json::<Value>().await?;
+            r
+        }
         "search_todos" => {
             let q = call.arguments["q"]
                 .as_str()
@@ -514,6 +543,21 @@ pub fn tool_catalog() -> Vec<Value> {
                 "type": "object",
                 "properties": {
                     "agent": { "type": "string", "description": "에이전트 이름" }
+                }
+            }
+        }),
+        serde_json::json!({
+            "name": "request_pilot",
+            "description": "파일럿(사용자)만 할 수 있는 작업을 요청합니다. 파일럿 전용 포스트잇에 즉시 반영되고 폰으로 알림이 갑니다. kind: approval=수동 승인 필요(배포·결제·계정 설정), decision=결정 필요(디자인·우선순위 선택), confirm=확인 요망(검토·회신). reason에는 '왜 이 행동이 필요한지'를 1줄로 작성하세요.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["title"],
+                "properties": {
+                    "title": { "type": "string", "description": "파일럿에게 요청할 작업 (예: '결제: AWS 크레딧 $50 충전')" },
+                    "kind": { "type": "string", "enum": ["approval", "decision", "confirm"], "description": "요청 종류 (기본: confirm)" },
+                    "reason": { "type": "string", "description": "왜 필요한지 1줄 — 파일럿 포스트잇에 배경으로 표시" },
+                    "priority": { "type": "string", "enum": ["high", "medium", "low"], "description": "기본: high" },
+                    "agent": { "type": "string", "description": "요청하는 에이전트 이름" }
                 }
             }
         }),

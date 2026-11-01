@@ -7,6 +7,7 @@
 
   let todos: Todo[] = [];
   let categories: Category[] = [];
+  let latestSummary: { title: string; summary: string } | null = null;
   let showAdd = false;
   let newTitle = "";
   let newNote = "";
@@ -45,6 +46,7 @@
       firstLoad = false;
       todos = r.todos;
       categories = r.categories;
+      latestSummary = r.latest_summary ?? null;
       synced = new Date().toLocaleTimeString("ko-KR");
       errorMsg = "";
       flashIds = flashIds;
@@ -54,6 +56,17 @@
   }
 
   function clearNewCount() { newCount = 0; }
+
+  // P2: 파일럿 요청 종류 태그(pilot:approval 등) → 배지 라벨
+  const PILOT_KINDS: Record<string, string> = {
+    "pilot:approval": "승인 대기",
+    "pilot:decision": "결정 필요",
+    "pilot:confirm": "확인 요망",
+  };
+  function pilotBadge(t: Todo): string {
+    const tag = t.tags.find((x) => PILOT_KINDS[x]);
+    return tag ? PILOT_KINDS[tag] : "";
+  }
 
   async function add() {
     if (!newTitle.trim()) return;
@@ -189,6 +202,7 @@
           <div class="urgent-item" class:flash={flashIds.has(t.id)}>
             <span class="prio-tag">{pLabel(t.priority)}</span>
             <span class="urgent-title">{t.title}</span>
+            {#if pilotBadge(t)}<span class="pilot-badge">{pilotBadge(t)}</span>{/if}
             {#if t.note}<span class="urgent-note">{t.note}</span>{/if}
           </div>
         {/each}
@@ -232,7 +246,7 @@
                   <input type="checkbox" checked={t.done} on:change={() => toggle(t.id)} />
                   <span class="prio-dot prio-{t.priority}" title={pLabel(t.priority)}></span>
                   <span class="content">
-                    <span class="ttl">{t.title}</span>
+                    <span class="ttl">{t.title}{#if pilotBadge(t)} <span class="pilot-badge">{pilotBadge(t)}</span>{/if}</span>
                     {#if t.note}<span class="note">{t.note.startsWith("✓") ? "✅" : "📝"} {t.note}</span>{/if}
                   </span>
                   <button class="del" on:click={() => remove(t.id)}>×</button>
@@ -260,7 +274,7 @@
                   <input type="checkbox" checked={t.done} on:change={() => toggle(t.id)} />
                   <span class="prio-dot prio-{t.priority}"></span>
                   <span class="content">
-                    <span class="ttl">{t.title}</span>
+                    <span class="ttl">{t.title}{#if pilotBadge(t)} <span class="pilot-badge">{pilotBadge(t)}</span>{/if}</span>
                     {#if t.note}<span class="note">{t.note.startsWith("✓") ? "✅" : "📝"} {t.note}</span>{/if}
                   </span>
                   <button class="del" on:click={() => remove(t.id)}>×</button>
@@ -271,6 +285,14 @@
         </section>
       {/if}
     </div>
+
+    {#if latestSummary}
+      <!-- P2: 최신 작업 요약 — 에이전트 포스트잇 하단 1~2줄 (지식상태 반영) -->
+      <div class="summary-footer" title="최근 완료한 작업 (요약은 파일럿 지식상태에 맞춰 작성됨)">
+        <span class="sf-label">🧾</span>
+        <span class="sf-text">{latestSummary.title} — {latestSummary.summary}</span>
+      </div>
+    {/if}
 
     {#if showAdd}
       <div class="addform">
@@ -372,6 +394,23 @@
     font-size: 12px; flex-wrap: wrap;
   }
   .urgent-title { font-weight: 600; flex: 1; min-width: 0; }
+
+  /* P2: 파일럿 요청 배지 + 최신 작업 요약 푸터 */
+  .pilot-badge {
+    display: inline-block; font-size: 9.5px; font-weight: 700; line-height: 1;
+    background: var(--border); color: #fff; border-radius: 4px;
+    padding: 2px 4px; vertical-align: 1px; white-space: nowrap;
+  }
+  .summary-footer {
+    display: flex; gap: 5px; align-items: flex-start;
+    margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border);
+    font-size: 11px; color: var(--text); opacity: 0.85;
+  }
+  .summary-footer .sf-label { flex-shrink: 0; }
+  .summary-footer .sf-text {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; word-break: keep-all;
+  }
   .urgent-note { font-size: 10px; opacity: 0.7; width: 100%; padding-left: 20px; }
   .prio-tag { font-size: 9px; white-space: nowrap; }
 
