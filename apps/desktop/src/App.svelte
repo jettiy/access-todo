@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { api, API_BASE, AGENT, AGENT_META, type Todo, type Priority, type Category } from "./api";
+  import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+  import { api, API_BASE, AGENT, AGENT_META, USE_PROXY, type Todo, type Priority, type Category } from "./api";
 
   let todos: Todo[] = [];
   let categories: Category[] = [];
@@ -125,6 +126,7 @@
 
   let pollTimer: ReturnType<typeof setInterval>;
   let events: EventSource | null = null;
+  let unlisten: UnlistenFn | null = null;
 
   onMount(() => {
     refresh();
@@ -132,12 +134,14 @@
     pollTimer = setInterval(refresh, 5000);
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
-    // 실시간: 서버 mutation 즉시 반영 — SSE 연결 소유자는 hermes 창 하나만.
-    // Chromium 호스트당 6커넥션 제한: 창 수 × SSE가 한도를 초과하면 mutation 후 재조회 fetch가
-    // 소켓 고갈로 실패 → "Failed to fetch" 고착(2026-10-18 실측: 7창 12연결).
-    // 나머지 창은 위 5초 폴링으로 커버된다.
+    // 실시간: 서버 mutation 즉시 반영. 두 경로가 있고 창은 둘 중 하나만 쓴다:
+    // ① USE_PROXY 빌드 — Rust가 /events를 단일 구독해 todos-changed 이벤트로 전파(ORDER-004,
+    //    창 수와 무관하게 브라우저 소켓 0개).
+    // ② 직접 fetch 빌드 — SSE 연결 소유자는 hermes 창 하나만(Chromium 호스트당 6커넥션 제한).
     try {
-      if (AGENT === "hermes") {
+      if (USE_PROXY) {
+        listen("todos-changed", () => refresh()).then((u) => { unlisten = u; });
+      } else if (AGENT === "hermes") {
         events = new EventSource(`${API_BASE}/events`);
         events.onmessage = () => refresh();
       }
@@ -147,6 +151,7 @@
   onDestroy(() => {
     clearInterval(pollTimer);
     events?.close();
+    unlisten?.();
     window.removeEventListener("focus", refresh);
   });
 </script>

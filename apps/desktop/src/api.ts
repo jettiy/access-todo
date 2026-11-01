@@ -2,9 +2,16 @@
 // Each post-it window reads its Tauri label to know which agent it represents.
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 
 const BASE = (import.meta.env.VITE_API_BASE as string) || "http://127.0.0.1:7878";
 export const API_BASE = BASE;
+
+// ORDER-004: when built with VITE_USE_PROXY=1, all HTTP goes through the
+// Rust `api_call` command (reqwest) instead of the WebView fetch — the
+// browser socket pool is never used, so N windows can't exhaust it.
+// Default off (direct fetch) until the 7-window 실측 flips it on.
+export const USE_PROXY = import.meta.env.VITE_USE_PROXY === "1";
 
 // Tauri 창 label이 에이전트 식별자 (hermes/omp/zcode/user).
 // dev 환경(브라우저)에서는 URL 쿼리 ?agent= 사용.
@@ -83,6 +90,11 @@ export interface WorklogResult {
 }
 
 async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
+  if (USE_PROXY) {
+    const method = (init.method || "GET").toUpperCase();
+    const body = init.body ? JSON.parse(String(init.body)) : undefined;
+    return invoke<T>("api_call", { agent: AGENT, method, path, body });
+  }
   const r = await fetch(`${BASE}${path}`, {
     ...init,
     headers: { "X-Agent": AGENT, "Content-Type": "application/json", ...(init.headers || {}) },
