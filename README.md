@@ -29,7 +29,7 @@ Pilot (widget) ──┘
 - **GitHub Gist sync** — single source of truth, ETag-based optimistic concurrency, 3-way merge
 - **Local-only mode** — no token, no cloud: everything stays in one JSON file *(wizard: in progress)*
 - **Android app** — same TODO list on your phone (Kotlin/Compose + Glance widget)
-- **16 MCP tools** — full CRUD, review, dev-notes and worklog generation
+- **18 MCP tools** — full CRUD, review, dev-notes, worklog, pilot delegation & pilot profile
 
 ## 🚀 Roadmap
 
@@ -39,8 +39,8 @@ Commercial follow-ups, if any, will be separate products decided by usage signal
 | Phase | Deliverable | Status |
 |-------|-------------|--------|
 | P0 | Agent skill (`skills/access-todo`) + free marketplace listing | ✅ this release |
-| P1 | First-run settings window: auto-detect agents → toggle to register MCP; connection self-healing after agent updates | 🚧 |
-| P2 | Pilot post-it + `request_pilot` tool + Android push | ⏳ |
+| P1 | First-run settings window: auto-detect agents → toggle to register MCP; connection self-healing after agent updates | ✅ 2026-11 |
+| P2 | Pilot post-it + `request_pilot` tool + work-summary footer + Android notifications | ✅ 2026-11 |
 | P3 | Growth & maintenance — stays free forever | ⏳ |
 
 Support wave (by ecosystem usage ranking): Hermes → Claude Code → Kilo Code → pi → Codex → Cline → Freebuff → omp → OpenClaw → DeepSeek Harness — details in [제품기획_v2_온보딩과상업화.md](docs/제품기획_v2_온보딩과상업화.md).

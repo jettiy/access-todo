@@ -6,6 +6,7 @@
 
   import { onMount } from "svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { invoke } from "@tauri-apps/api/core";
   import { agentsApi, settingsApi, type AgentRow, type SettingsInfo } from "./api";
 
   const LEVELS: { id: string; label: string; hint: string }[] = [
@@ -63,6 +64,12 @@
     settings = { ...settings, ...r.settings };
   }
 
+  // 토글 후 포스트잇 창을 즉시 표시/숨김 (활성한 에이전트만 포스트잇 — v1.2)
+  function syncWindows() {
+    const enabled = agents.filter((a) => a.enabled).map((a) => a.id);
+    invoke("sync_agent_windows", { enabled }).catch(() => {});
+  }
+
   async function toggleAgent(a: AgentRow) {
     if (busy) return;
     busy = a.id;
@@ -76,6 +83,7 @@
         notice = `${a.display} 연동 해제 (백업 보관)`;
       }
       await reload();
+      syncWindows();
     } catch (e) {
       notice = `${a.display}: ${(e as Error).message}`;
     } finally {

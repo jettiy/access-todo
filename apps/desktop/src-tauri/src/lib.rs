@@ -27,6 +27,13 @@ fn api_base() -> String {
     std::env::var("ACCESS_API_BASE").unwrap_or_else(|_| "http://127.0.0.1:7878".into())
 }
 
+/// Shared HTTP client (keep-alive reuse instead of a client per call).
+static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+
+fn http() -> &'static reqwest::Client {
+    CLIENT.get_or_init(reqwest::Client::new)
+}
+
 /// Proxy one HTTP call to the local api-server on behalf of a webview.
 /// Uses reqwest (outside the browser socket pool); the webview's `agent`
 /// is forwarded as the X-Agent header so attribution keeps working.
@@ -37,10 +44,9 @@ async fn api_call(
     path: String,
     body: Option<Value>,
 ) -> Result<Value, String> {
-    let client = reqwest::Client::new();
     let m = reqwest::Method::from_bytes(method.to_uppercase().as_bytes())
         .map_err(|e| e.to_string())?;
-    let mut req = client
+    let mut req = http()
         .request(m, format!("{}{}", api_base(), path))
         .header("X-Agent", &agent);
     if let Some(b) = &body {
@@ -58,14 +64,55 @@ async fn api_call(
     Ok(serde_json::from_str(&text).unwrap_or(Value::String(text)))
 }
 
+/// Fetch the pilot's enabled agent ids from /settings. None (server down or
+/// unparsable) means "keep every window visible" — the safe fallback.
+async fn fetch_enabled_agents() -> Option<Vec<String>> {
+    let v: Value = http()
+        .get(format!("{}/settings", api_base()))
+        .send()
+        .await
+        .ok()?
+        .json()
+        .await
+        .ok()?;
+    v.get("enabled_agents")?
+        .as_array()?
+        .iter()
+        .map(|x| x.as_str().map(String::from))
+        .collect()
+}
+
+/// Windows for agents the pilot toggled OFF are hidden; the pilot's own
+/// window ("user") and the dev-notes widget always stay. Falls back to
+/// "all visible" when settings are unavailable.
+fn apply_window_visibility(app: &tauri::AppHandle, enabled: Option<&[String]>) {
+    let Some(enabled) = enabled else { return };
+    for (label, _title, _x, _y, _bg) in AGENT_WINDOWS {
+        if *label == "user" || *label == "devnotes" {
+            continue;
+        }
+        if let Some(w) = app.get_webview_window(label) {
+            let on = enabled.iter().any(|a| a == label);
+            let _ = if on { w.show() } else { w.hide() };
+        }
+    }
+}
+
+/// Settings window calls this after a toggle so post-its appear/disappear
+/// immediately (제품기획 v1.2 — 활성한 에이전트만 포스트잇).
+#[tauri::command]
+async fn sync_agent_windows(app: tauri::AppHandle, enabled: Vec<String>) -> Result<(), String> {
+    apply_window_visibility(&app, Some(&enabled));
+    Ok(())
+}
+
 /// The single /events (SSE) subscription for the whole app. Every `changed`
 /// event is re-emitted as a Tauri event; webviews listen instead of opening
 /// their own EventSource. Reconnects with a short backoff while the
 /// api-server is down so windows recover without user action.
 async fn sse_bridge(app: tauri::AppHandle) {
-    let client = reqwest::Client::new();
     loop {
-        match client.get(format!("{}/events", api_base())).send().await {
+        match http().get(format!("{}/events", api_base())).send().await {
             Ok(resp) if resp.status().is_success() => {
                 use futures_util::StreamExt;
                 let mut stream = resp.bytes_stream();
@@ -134,7 +181,7 @@ pub fn run() {
                 )
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![api_call, open_settings])
+        .invoke_handler(tauri::generate_handler![api_call, open_settings, sync_agent_windows])
         .setup(|app| {
             for (label, title, x, y, _bg) in AGENT_WINDOWS {
                 let url = WebviewUrl::App(format!("index.html?agent={label}").into());
@@ -149,8 +196,14 @@ pub fn run() {
                     .transparent(false)
                     .resizable(true)
                     .skip_taskbar(false)
+                    .visible(true)
                     .build()?;
             }
+            // 설정 기반 창 가시성(제품기획 v1.2): 비활성 에이전트 창은 숨김.
+            // 설정 서버가 죽어 있으면 전부 표시(안전 폴백). 창 생성은 항상 전부
+            // 해두고 hide만 하므로, 토글로 즉시 복귀 가능하다.
+            let enabled = tauri::async_runtime::block_on(fetch_enabled_agents());
+            apply_window_visibility(app.handle(), enabled.as_deref());
             // 첫 실행 온보딩(제품기획 v1.2): exe 옆 access-settings.json이
             // 없으면 설정창을 자동으로 연다 — 토글로 에이전트를 켜는 곳까지가 온보딩.
             let first_run = std::env::current_exe()
