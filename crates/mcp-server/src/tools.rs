@@ -33,6 +33,48 @@ fn id_of(args: &Value) -> anyhow::Result<String> {
         .ok_or_else(|| anyhow::anyhow!("id required"))
 }
 
+/// Per-level summary style (제품기획 v1.2 · 지식상태 4단계).
+pub fn summary_style_guide(level: &str) -> String {
+    match level {
+        "beginner" => "초보: 전문용어 금지, 일상 비유 필수, '무엇을 위해 했는지' 중심.".into(),
+        "intermediate" => "중급: 핵심 키워드 + 가벼운 비유 병행.".into(),
+        "advanced" => "고급: 에이전트의 Soul이 자율 판단 — 기술 용어 그대로, 스타일 제약 없음.".into(),
+        // "auto" and anything unknown
+        _ => "자동: 대화 흔적으로 파일럿 수준을 추정하고 그 수준으로 쓰기, 불명확하면 중급.".into(),
+    }
+}
+
+/// Read the pilot's current knowledge level from `access-settings.json`
+/// next to this executable (written by the API server's /settings).
+/// Returns None when the file is absent — callers fall back to "auto".
+fn pilot_level_hint() -> Option<String> {
+    let path = std::env::current_exe()
+        .ok()?
+        .parent()?
+        .join("access-settings.json");
+    let text = std::fs::read_to_string(path).ok()?;
+    let v: Value = serde_json::from_str(&text).ok()?;
+    v.get("pilot_level")
+        .and_then(|x| x.as_str())
+        .map(String::from)
+}
+
+/// complete_todo description with the current pilot level injected, so the
+/// agent writes summaries at the right level without an extra round-trip.
+fn complete_todo_description() -> String {
+    let base = "작업을 완료로 표시하고 summary에 작업 내용 요약을 기록합니다. 코드/파일 수정을 마친 후 호출하세요. 요약 규격: 최대 3줄, 핵심 결과 먼저, 파일럿이 쓰는 언어로 작성.";
+    match pilot_level_hint() {
+        Some(level) => format!(
+            "{base} 현재 파일럿 지식상태: {level} — {}",
+            summary_style_guide(&level)
+        ),
+        None => format!(
+            "{base} 현재 파일럿 지식상태: auto — {}",
+            summary_style_guide("auto")
+        ),
+    }
+}
+
 /// Execute a tool call by forwarding it to the REST API.
 pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
     let agent = agent_of(&call.arguments);
@@ -208,6 +250,24 @@ pub async fn dispatch(_store: (), call: ToolCall) -> anyhow::Result<Value> {
                 .json::<Value>().await?;
             r
         }
+        "get_pilot_profile" => {
+            // 파일럿 지식상태 + 요약 스타일 가이드 (요약 작성 직전 호출)
+            let mut r = client
+                .get(format!("{base}/settings"))
+                .header("X-Agent", &agent)
+                .send().await?
+                .json::<Value>().await?;
+            let level = r
+                .get("pilot_level")
+                .and_then(|v| v.as_str())
+                .unwrap_or("auto")
+                .to_string();
+            r["summary_style_guide"] = Value::String(format!(
+                "{} 공통: 최대 3줄, 핵심 결과 먼저, 파일럿이 쓰는 언어로.",
+                summary_style_guide(&level)
+            ));
+            r
+        }
         "list_devnotes" => {
             let mut url = format!("{base}/devnotes?");
             let mut first = true;
@@ -365,7 +425,7 @@ pub fn tool_catalog() -> Vec<Value> {
         }),
         serde_json::json!({
             "name": "complete_todo",
-            "description": "작업을 완료로 표시하고 summary에 작업 내용 요약을 기록합니다. 코드/파일 수정을 마친 후 호출하세요. summary에는 무엇을 변경했는지 간결히 작성하세요 (예: 'job_select.lua 51줄 nil 체크 추가').",
+            "description": complete_todo_description(),
             "inputSchema": {
                 "type": "object",
                 "required": ["id", "summary"],
@@ -444,6 +504,16 @@ pub fn tool_catalog() -> Vec<Value> {
                 "type": "object",
                 "properties": {
                     "agent": { "type": "string", "description": "점검할 에이전트 이름" }
+                }
+            }
+        }),
+        serde_json::json!({
+            "name": "get_pilot_profile",
+            "description": "파일럿(사용자)의 지식상태와 요약 스타일 가이드를 반환합니다. complete_todo의 summary를 작성하기 직전에 호출하세요. 지식상태는 초보(쉬운 비유)/중급(키워드+가벼운 비유)/고급(자율)/자동(대화 흔적으로 추정, 불명확 시 중급) 4단계입니다.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "agent": { "type": "string", "description": "에이전트 이름" }
                 }
             }
         }),
