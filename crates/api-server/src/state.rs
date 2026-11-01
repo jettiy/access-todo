@@ -6,8 +6,10 @@
 //! the only copy. A broadcast channel fans out "changed" events to SSE
 //! subscribers so post-it windows refresh instantly.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
+use agent_registry::Registry;
 use tokio::sync::{broadcast, Mutex};
 
 use todo_core::gist::GistClient;
@@ -15,23 +17,40 @@ use todo_core::storage::LocalStore;
 use todo_core::store::Store;
 use todo_core::sync::SyncEngine;
 
+use crate::settings::Settings;
+
 #[derive(Clone)]
 pub struct AppState {
     pub store: Arc<Mutex<Store>>,
     pub sync: Arc<Option<SyncEngine>>,
     pub local: Arc<LocalStore>,
     pub tx: broadcast::Sender<String>,
+    /// Pilot settings (enabled agents, knowledge level, sync mode).
+    pub settings: Arc<Mutex<Settings>>,
+    pub settings_path: PathBuf,
+    /// Agent-tool detection/MCP registration, bound to the user's home.
+    pub registry: Arc<Registry>,
+    /// Path of the MCP server executable used in registrations.
+    pub mcp_exe: PathBuf,
 }
 
 impl AppState {
     /// Empty in-memory store, no Gist sync (used by tests).
-    /// Local persistence goes to a temp file so tests stay hermetic.
+    /// Local persistence, settings and the agent registry all point at a
+    /// temp directory so tests stay hermetic.
     pub fn new() -> Self {
         let tmp = std::env::temp_dir().join(format!(
-            "access-api-test-{}.json",
+            "access-api-test-{}",
             std::process::id()
         ));
-        Self::with_parts(None, LocalStore::new(tmp))
+        let _ = std::fs::create_dir_all(&tmp);
+        Self::with_parts(
+            None,
+            LocalStore::new(tmp.join("data.json")),
+            tmp.join("settings.json"),
+            Registry::with_home(tmp.clone()),
+            tmp.join("Access-MCP.exe"),
+        )
     }
 
     /// Store backed by a Gist + local file. Reads GITHUB_TOKEN and
@@ -46,16 +65,42 @@ impl AppState {
         let data_path = std::env::var("ACCESS_DATA_FILE").unwrap_or_else(|_| {
             default_data_path()
         });
-        Self::with_parts(engine, LocalStore::new(data_path))
+        let settings_path = crate::settings::default_settings_path();
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.to_path_buf()));
+        let mcp_exe = exe_dir
+            .clone()
+            .map(|d| d.join("Access-MCP.exe"))
+            .unwrap_or_else(|| PathBuf::from("Access-MCP.exe"));
+        Self::with_parts(
+            engine,
+            LocalStore::new(data_path),
+            settings_path,
+            Registry::new(),
+            mcp_exe,
+        )
     }
 
-    fn with_parts(engine: Option<SyncEngine>, local: LocalStore) -> Self {
+    #[allow(clippy::too_many_arguments)]
+    fn with_parts(
+        engine: Option<SyncEngine>,
+        local: LocalStore,
+        settings_path: PathBuf,
+        registry: Registry,
+        mcp_exe: PathBuf,
+    ) -> Self {
         let (tx, _rx) = broadcast::channel(16);
+        let settings = Settings::load(&settings_path);
         Self {
             store: Arc::new(Mutex::new(Store::new())),
             sync: Arc::new(engine),
             local: Arc::new(local),
             tx,
+            settings: Arc::new(Mutex::new(settings)),
+            settings_path,
+            registry: Arc::new(registry),
+            mcp_exe,
         }
     }
 

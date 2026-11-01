@@ -11,6 +11,7 @@ use serde::Deserialize;
 use todo_core::model::{GameSystem, NoteType, Priority};
 use todo_core::store::{DevNoteInput, DevNotePatch, NoteFilter, TodoInput, TodoPatch};
 
+use crate::agents;
 use crate::auth::agent_from_headers;
 use crate::state::AppState;
 
@@ -209,6 +210,11 @@ pub fn router(state: AppState) -> Router {
         .route("/devnotes/by-version/:ver", get(devnotes_by_version))
         .route("/devnotes/worklog/generate", post(generate_worklog_handler))
         .route("/devnotes/:id", get(one_devnote).patch(update_devnote).delete(delete_devnote))
+        .route("/settings", get(agents::get_settings).put(agents::put_settings))
+        .route("/agents", get(agents::list_agents))
+        .route("/agents/health", get(agents::agents_health))
+        .route("/agents/:id/register", post(agents::register_agent))
+        .route("/agents/:id/unregister", post(agents::unregister_agent))
         .route("/health", get(|| async { "ok" }))
         .layer(cors)
         .with_state(state)

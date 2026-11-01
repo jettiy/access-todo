@@ -24,6 +24,27 @@ async fn main() -> anyhow::Result<()> {
         todos, cats
     );
 
+    // Connection self-healing (P1): re-register the Access MCP entry in any
+    // enabled agent whose config lost it (e.g. the tool updated and rewrote
+    // its config). Runs at startup and every 6 hours. Schema errors are
+    // reported, never auto-fixed.
+    let heal_state = state.clone();
+    tokio::spawn(async move {
+        loop {
+            for row in api_server::run_heal(&heal_state).await {
+                match row.status {
+                    "healed" => println!(
+                        "[self-heal] {} MCP 재등록 완료 (도구 업데이트로 해제된 것으로 추정)",
+                        row.id
+                    ),
+                    "error" => eprintln!("[self-heal] {} 실패: {}", row.id, row.detail.unwrap_or_default()),
+                    _ => {}
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(6 * 60 * 60)).await;
+        }
+    });
+
     let gist_on = state.sync.is_some();
     let app = router(state);
     // 기본은 127.0.0.1 (localhost 전용). TODO_BIND=0.0.0.0 으로 WSL/네트워크 접근 허용.

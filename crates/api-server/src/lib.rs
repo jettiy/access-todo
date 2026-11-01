@@ -3,10 +3,13 @@
 //! Every mutation reads the `X-Agent` header and records it in the
 //! resulting todo's audit fields, so caller attribution is preserved.
 
+mod agents;
 mod auth;
 mod routes;
+pub mod settings;
 mod state;
 
+pub use agents::run_heal;
 pub use routes::router;
 pub use state::AppState;
 

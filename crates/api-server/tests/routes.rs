@@ -252,3 +252,94 @@ async fn devnotes_filter_by_type() {
     assert_eq!(v["devnotes"].as_array().unwrap().len(), 1);
     assert_eq!(v["devnotes"][0]["title"], "i");
 }
+
+// ── Settings & agents API (P1) ──
+
+#[tokio::test]
+async fn settings_defaults_put_and_clamp() {
+    let app = app_for_test();
+    let resp = app.clone().oneshot(req("GET", "/settings", "")).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let v: serde_json::Value =
+        serde_json::from_str(&body_str(resp.into_body()).await).unwrap();
+    assert_eq!(v["pilot_level"], "auto");
+    assert_eq!(v["sync_mode"], "gist");
+
+    let resp = app
+        .clone()
+        .oneshot(req("PUT", "/settings", r#"{"pilot_level":"beginner","sync_mode":"local"}"#))
+        .await
+        .unwrap();
+    let v: serde_json::Value =
+        serde_json::from_str(&body_str(resp.into_body()).await).unwrap();
+    assert_eq!(v["ok"], true);
+    assert_eq!(v["settings"]["pilot_level"], "beginner");
+    assert_eq!(v["settings"]["sync_mode"], "local");
+
+    // invalid values clamp back to defaults
+    let resp = app
+        .oneshot(req("PUT", "/settings", r#"{"pilot_level":"wizard"}"#))
+        .await
+        .unwrap();
+    let v: serde_json::Value =
+        serde_json::from_str(&body_str(resp.into_body()).await).unwrap();
+    assert_eq!(v["settings"]["pilot_level"], "auto");
+}
+
+#[tokio::test]
+async fn agents_list_and_custom_rest_agent_flow() {
+    let app = app_for_test();
+    // registry rows exist for all known tools (hermetic temp home → not installed)
+    let resp = app.clone().oneshot(req("GET", "/agents", "")).await.unwrap();
+    let v: serde_json::Value =
+        serde_json::from_str(&body_str(resp.into_body()).await).unwrap();
+    let agents = v["agents"].as_array().unwrap();
+    assert!(agents.iter().any(|a| a["id"] == "zcode" && a["integration"] == "mcp"));
+
+    // custom REST agent: register → appears as enabled rest row
+    let resp = app
+        .clone()
+        .oneshot(req("POST", "/agents/hermes/register", ""))
+        .await
+        .unwrap();
+    let v: serde_json::Value =
+        serde_json::from_str(&body_str(resp.into_body()).await).unwrap();
+    assert_eq!(v["outcome"], "enabled-rest");
+
+    let resp = app.clone().oneshot(req("GET", "/agents", "")).await.unwrap();
+    let v: serde_json::Value =
+        serde_json::from_str(&body_str(resp.into_body()).await).unwrap();
+    let hermes = v["agents"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|a| a["id"] == "hermes")
+        .cloned()
+        .unwrap();
+    assert_eq!(hermes["integration"], "rest");
+    assert_eq!(hermes["enabled"], true);
+
+    // unregister removes it again
+    let resp = app
+        .clone()
+        .oneshot(req("POST", "/agents/hermes/unregister", ""))
+        .await
+        .unwrap();
+    let v: serde_json::Value =
+        serde_json::from_str(&body_str(resp.into_body()).await).unwrap();
+    assert_eq!(v["outcome"], "disabled-rest");
+    let resp = app.oneshot(req("GET", "/agents", "")).await.unwrap();
+    let v: serde_json::Value =
+        serde_json::from_str(&body_str(resp.into_body()).await).unwrap();
+    assert!(!v["agents"].as_array().unwrap().iter().any(|a| a["id"] == "hermes"));
+}
+
+#[tokio::test]
+async fn agents_health_runs_clean() {
+    let app = app_for_test();
+    let resp = app.oneshot(req("GET", "/agents/health", "")).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let v: serde_json::Value =
+        serde_json::from_str(&body_str(resp.into_body()).await).unwrap();
+    assert!(v["results"].is_array());
+}
