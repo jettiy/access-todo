@@ -1,4 +1,4 @@
-# Access-감시.ps1
+﻿# Access-감시.ps1
 # 백그라운드에서 실행되어 에이전트 프로세스를 감시합니다.
 # 모든 에이전트(ZCode, Hermes 게이트웨이, OMP)가 종료되면
 # Access 포스트잇과 API 서버도 함께 종료합니다.
@@ -38,6 +38,12 @@ while ($true) {
             $anyAgentAlive = $true
             break
         }
+    }
+
+    # Access-MCP.exe는 에이전트 세션마다 함께 뜨므로, 하나라도 살아 있으면
+    # 에이전트가 활동 중인 것으로 판정 (신규·커스텀 에이전트까지 미래형 커버)
+    if (Get-Process "Access-MCP" -ErrorAction SilentlyContinue) {
+        $anyAgentAlive = $true
     }
 
     # Hermes 게이트웨이는 python.exe / pythonw.exe로 실행되므로 둘 다 확인
