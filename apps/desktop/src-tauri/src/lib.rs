@@ -9,7 +9,7 @@
 // The frontend opts in at build time with VITE_USE_PROXY=1 (default off).
 
 use serde_json::Value;
-use tauri::{Emitter, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_window_state::StateFlags;
 
 /// Each entry: (window label, display title, default x, default y, background color)
@@ -96,6 +96,34 @@ async fn sse_bridge(app: tauri::AppHandle) {
     }
 }
 
+/// Show the settings window, creating it on first open. Shared by the
+/// first-run auto-open (onboarding) and the ⚙ button on every post-it.
+fn ensure_settings_window(app: &tauri::AppHandle) -> tauri::Result<()> {
+    if let Some(w) = app.get_webview_window("settings") {
+        w.show()?;
+        w.set_focus()?;
+        return Ok(());
+    }
+    WebviewWindowBuilder::new(
+        app,
+        "settings",
+        WebviewUrl::App("index.html?agent=settings".into()),
+    )
+    .title("Access 설정")
+    .inner_size(560.0, 680.0)
+    .min_inner_size(460.0, 520.0)
+    .center()
+    .resizable(true)
+    .build()?;
+    Ok(())
+}
+
+/// Opens/focuses the settings window from a webview (⚙ button).
+#[tauri::command]
+async fn open_settings(app: tauri::AppHandle) -> Result<(), String> {
+    ensure_settings_window(&app).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -106,7 +134,7 @@ pub fn run() {
                 )
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![api_call])
+        .invoke_handler(tauri::generate_handler![api_call, open_settings])
         .setup(|app| {
             for (label, title, x, y, _bg) in AGENT_WINDOWS {
                 let url = WebviewUrl::App(format!("index.html?agent={label}").into());
@@ -122,6 +150,16 @@ pub fn run() {
                     .resizable(true)
                     .skip_taskbar(false)
                     .build()?;
+            }
+            // 첫 실행 온보딩(제품기획 v1.2): exe 옆 access-settings.json이
+            // 없으면 설정창을 자동으로 연다 — 토글로 에이전트를 켜는 곳까지가 온보딩.
+            let first_run = std::env::current_exe()
+                .ok()
+                .and_then(|p| p.parent().map(|d| d.join("access-settings.json")))
+                .map(|p| !p.exists())
+                .unwrap_or(false);
+            if first_run {
+                ensure_settings_window(app.handle())?;
             }
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(sse_bridge(handle));

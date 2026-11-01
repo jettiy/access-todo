@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { invoke } from "@tauri-apps/api/core";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-  import { api, API_BASE, AGENT, AGENT_META, USE_PROXY, type Todo, type Priority, type Category } from "./api";
+  import { api, API_BASE, AGENT, AGENT_META, IN_TAURI, USE_PROXY, type Todo, type Priority, type Category } from "./api";
 
   let todos: Todo[] = [];
   let categories: Category[] = [];
@@ -93,9 +94,10 @@
   async function toggle(id: string) { await api.toggle(id); await refresh(); }
   async function remove(id: string) { await api.del(id); await refresh(); }
   function toggleOnTop() { onTop = !onTop; appWindow.setAlwaysOnTop(onTop); }
+  function openSettings() { invoke("open_settings").catch(() => {}); }
   function minimize() { appWindow.minimize(); }
   async function close() {
-    try { await fetch("http://127.0.0.1:7878/sync", { method: "POST", headers: { "X-Agent": AGENT } }); } catch {}
+    try { await api.sync(); } catch {}
     await appWindow.close();
   }
   function toggleCollapse() { collapsed = !collapsed; }
@@ -139,7 +141,7 @@
     //    창 수와 무관하게 브라우저 소켓 0개).
     // ② 직접 fetch 빌드 — SSE 연결 소유자는 hermes 창 하나만(Chromium 호스트당 6커넥션 제한).
     try {
-      if (USE_PROXY) {
+      if (USE_PROXY && IN_TAURI) {
         listen("todos-changed", () => refresh()).then((u) => { unlisten = u; });
       } else if (AGENT === "hermes") {
         events = new EventSource(`${API_BASE}/events`);
@@ -162,6 +164,7 @@
     <span class="title" on:mousedown={titleMousedown} on:click={clearNewCount}>{meta.emoji} {meta.title}</span>
     {#if newCount > 0}<span class="badge-new" on:click={clearNewCount}>🔴 {newCount}</span>{/if}
     <div class="window-controls" on:mousedown|stopPropagation>
+      <button class="win-btn" on:click={openSettings} title="설정">⚙</button>
       <button class="win-btn" on:click={toggleOnTop} title={onTop ? "항상 위 해제" : "항상 위"} class:active={onTop}>📌</button>
       <button class="win-btn" on:click={toggleCollapse} title="접기">{collapsed ? "▾" : "▴"}</button>
       <button class="win-btn" on:click={minimize} title="최소화">⚊</button>

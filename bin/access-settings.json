@@ -1,0 +1,8 @@
+{
+  "enabled_agents": [
+    "zcode",
+    "hermes"
+  ],
+  "pilot_level": "auto",
+  "sync_mode": "gist"
+}

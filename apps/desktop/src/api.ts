@@ -7,11 +7,15 @@ import { invoke } from "@tauri-apps/api/core";
 const BASE = (import.meta.env.VITE_API_BASE as string) || "http://127.0.0.1:7878";
 export const API_BASE = BASE;
 
-// ORDER-004: when built with VITE_USE_PROXY=1, all HTTP goes through the
-// Rust `api_call` command (reqwest) instead of the WebView fetch — the
-// browser socket pool is never used, so N windows can't exhaust it.
-// Default off (direct fetch) until the 7-window 실측 flips it on.
-export const USE_PROXY = import.meta.env.VITE_USE_PROXY === "1";
+// ORDER-004: by default all HTTP goes through the Rust `api_call` command
+// (reqwest) instead of WebView fetch — the browser socket pool is never
+// used, so N windows can't exhaust it. VITE_USE_PROXY=0 빌드로 직접 fetch
+// 경로(폴백)를 복원할 수 있다. 브라우저 개발 모드(vite dev)에서는 invoke가
+// 없으므로 자동으로 fetch로 동작한다.
+export const USE_PROXY = import.meta.env.VITE_USE_PROXY !== "0";
+
+export const IN_TAURI =
+  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 // Tauri 창 label이 에이전트 식별자 (hermes/omp/zcode/user).
 // dev 환경(브라우저)에서는 URL 쿼리 ?agent= 사용.
@@ -90,9 +94,10 @@ export interface WorklogResult {
 }
 
 async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
-  if (USE_PROXY) {
-    const method = (init.method || "GET").toUpperCase();
-    const body = init.body ? JSON.parse(String(init.body)) : undefined;
+  const method = (init.method || "GET").toUpperCase();
+  const body = init.body ? JSON.parse(String(init.body)) : undefined;
+  if (USE_PROXY && IN_TAURI) {
+    // invoke 실패는 그대로 전파(중복 실행 방지) — 브라우저 dev에선 fetch 경로
     return invoke<T>("api_call", { agent: AGENT, method, path, body });
   }
   const r = await fetch(`${BASE}${path}`, {
@@ -122,10 +127,10 @@ export const api = {
     req<{ deleted: string }>(`/categories/${id}`, { method: "DELETE" }),
   reorderCategories: (orderedIds: string[]) =>
     req<{ ok: boolean }>("/categories/reorder", { method: "POST", body: JSON.stringify({ agent: AGENT, ordered_ids: orderedIds }) }),
+  sync: () => req<{ ok: boolean }>("/sync", { method: "POST" }),
 };
 
-export const devnoteApi = {
-  list: (params?: { note_type?: NoteType; game_system?: GameSystem; version?: string }) => {
+export const devnoteApi = {  list: (params?: { note_type?: NoteType; game_system?: GameSystem; version?: string }) => {
     const qs = new URLSearchParams();
     if (params?.note_type) qs.set("note_type", params.note_type);
     if (params?.game_system) qs.set("game_system", params.game_system);
@@ -142,4 +147,46 @@ export const devnoteApi = {
   del: (id: string) => req<{ deleted: string }>(`/devnotes/${id}`, { method: "DELETE" }),
   generateWorklog: (date?: string) =>
     req<WorklogResult>("/devnotes/worklog/generate", { method: "POST", body: JSON.stringify({ date }) }),
+};
+
+// ── 설정창(P1): settings + agents API ──
+
+export interface AgentRow {
+  id: string;
+  display: string;
+  integration: "mcp" | "rest" | string;
+  experimental: boolean;
+  installed: boolean;
+  config_path: string;
+  registered: boolean;
+  enabled: boolean;
+}
+
+export interface SettingsInfo {
+  pilot_level: string; // beginner | intermediate | advanced | auto
+  sync_mode: string;   // gist | local
+  enabled_agents: string[];
+  gist_sync: boolean;
+  valid_levels: string[];
+}
+
+export interface AgentAction {
+  id: string;
+  outcome: string;
+  error?: string | null;
+  settings_saved: boolean;
+}
+
+export const settingsApi = {
+  get: () => req<SettingsInfo>("/settings"),
+  put: (patch: { pilot_level?: string; sync_mode?: string; enabled_agents?: string[] }) =>
+    req<{ ok: boolean; settings: SettingsInfo }>("/settings", { method: "PUT", body: JSON.stringify(patch) }),
+};
+
+export const agentsApi = {
+  list: () => req<{ agents: AgentRow[] }>("/agents"),
+  register: (id: string) =>
+    req<AgentAction>(`/agents/${encodeURIComponent(id)}/register`, { method: "POST" }),
+  unregister: (id: string) =>
+    req<AgentAction>(`/agents/${encodeURIComponent(id)}/unregister`, { method: "POST" }),
 };
