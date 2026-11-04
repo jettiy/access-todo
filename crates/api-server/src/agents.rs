@@ -19,6 +19,16 @@ pub struct SettingsPatch {
     pub sync_mode: Option<String>,
     #[serde(default)]
     pub enabled_agents: Option<Vec<String>>,
+    #[serde(default)]
+    pub workspace_mode: Option<String>,
+    #[serde(default)]
+    pub active_game: Option<Option<String>>,
+    #[serde(default)]
+    pub active_project: Option<Option<String>>,
+    #[serde(default)]
+    pub games: Option<Vec<String>>,
+    #[serde(default)]
+    pub projects: Option<Vec<String>>,
 }
 
 /// GET /settings — current settings + whether Gist sync is live.
@@ -30,10 +40,17 @@ pub async fn get_settings(State(s): State<AppState>) -> Json<Value> {
         "enabled_agents": st.enabled_agents,
         "gist_sync": s.sync.is_some(),
         "valid_levels": crate::settings::LEVELS,
+        "workspace_mode": st.workspace_mode,
+        "active_game": st.active_game,
+        "active_project": st.active_project,
+        "games": st.games,
+        "projects": st.projects,
     }))
 }
 
 /// PUT /settings — partial update, persisted to access-settings.json.
+/// Broadcasts a change event so the dev-notes window picks up mode/selection
+/// switches immediately.
 pub async fn put_settings(
     State(s): State<AppState>,
     Json(patch): Json<SettingsPatch>,
@@ -48,8 +65,26 @@ pub async fn put_settings(
     if let Some(agents) = &patch.enabled_agents {
         st.enabled_agents = agents.clone();
     }
+    if let Some(m) = &patch.workspace_mode {
+        st.workspace_mode = m.clone();
+    }
+    if let Some(g) = &patch.active_game {
+        st.active_game = g.clone();
+    }
+    if let Some(p) = &patch.active_project {
+        st.active_project = p.clone();
+    }
+    if let Some(list) = &patch.games {
+        st.games = list.clone();
+    }
+    if let Some(list) = &patch.projects {
+        st.projects = list.clone();
+    }
     st.normalize();
     let saved = st.save(&s.settings_path);
+    drop(st);
+    s.broadcast_change();
+    let st = s.settings.lock().await;
     Json(serde_json::json!({
         "ok": saved.is_ok(),
         "error": saved.err(),

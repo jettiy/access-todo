@@ -151,7 +151,12 @@ export const devnoteApi = {  list: (params?: { note_type?: NoteType; game_system
     const query = qs.toString();
     return req<{ devnotes: DevNote[] }>(`/devnotes${query ? "?" + query : ""}`);
   },
-  timeline: () => req<{ devnotes: DevNote[] }>("/devnotes/timeline"),
+  timeline: (tag?: string) => {
+    const qs = tag ? `?tag=${encodeURIComponent(tag)}` : "";
+    return req<{ devnotes: DevNote[] }>(`/devnotes/timeline${qs}`);
+  },
+  classifyUntagged: () =>
+    req<{ classified: number; fallback: number; skipped: number; error?: string }>("/devnotes/classify-untagged", { method: "POST" }),
   byVersion: (ver: string) => req<{ devnotes: DevNote[]; version: string }>(`/devnotes/by-version/${ver}`),
   create: (data: { note_type: NoteType; title: string; body: string; game_system?: GameSystem; version?: string; tags?: string[] }) =>
     req<DevNote>("/devnotes", { method: "POST", body: JSON.stringify(data) }),
@@ -181,6 +186,20 @@ export interface SettingsInfo {
   enabled_agents: string[];
   gist_sync: boolean;
   valid_levels: string[];
+  // 작업 공간 (게임/프로젝트 모드)
+  workspace_mode: "game" | "project" | string;
+  active_game: string | null;
+  active_project: string | null;
+  games: string[];
+  projects: string[];
+}
+
+export interface WorkspacePatch {
+  workspace_mode?: string;
+  active_game?: string | null;
+  active_project?: string | null;
+  games?: string[];
+  projects?: string[];
 }
 
 export interface AgentAction {
@@ -192,7 +211,7 @@ export interface AgentAction {
 
 export const settingsApi = {
   get: () => req<SettingsInfo>("/settings"),
-  put: (patch: { pilot_level?: string; sync_mode?: string; enabled_agents?: string[] }) =>
+  put: (patch: { pilot_level?: string; sync_mode?: string; enabled_agents?: string[] } & WorkspacePatch) =>
     req<{ ok: boolean; settings: SettingsInfo }>("/settings", { method: "PUT", body: JSON.stringify(patch) }),
 };
 

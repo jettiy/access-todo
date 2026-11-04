@@ -32,6 +32,9 @@ pub struct AppState {
     pub registry: Arc<Registry>,
     /// Path of the MCP server executable used in registrations.
     pub mcp_exe: PathBuf,
+    /// Local Ollama (base_url, model) for note classification; None disables
+    /// (tests) — the fallback path then uses the active workspace tag.
+    pub ollama: Option<(String, String)>,
 }
 
 impl AppState {
@@ -50,6 +53,7 @@ impl AppState {
             tmp.join("settings.json"),
             Registry::with_home(tmp.clone()),
             tmp.join("Access-MCP.exe"),
+            None, // no Ollama in tests — deterministic fallback path
         )
     }
 
@@ -73,12 +77,22 @@ impl AppState {
             .clone()
             .map(|d| d.join("Access-MCP.exe"))
             .unwrap_or_else(|| PathBuf::from("Access-MCP.exe"));
+        // Local classifier (Ollama). OLLAMA_URL="" 로 끌 수 있다.
+        let ollama = match std::env::var("OLLAMA_URL") {
+            Ok(u) if u.is_empty() => None,
+            Ok(u) => Some((u, std::env::var("OLLAMA_MODEL").unwrap_or_else(|_| "qwen3.8:27b".into()))),
+            Err(_) => Some((
+                "http://127.0.0.1:11434".into(),
+                std::env::var("OLLAMA_MODEL").unwrap_or_else(|_| "qwen3.8:27b".into()),
+            )),
+        };
         Self::with_parts(
             engine,
             LocalStore::new(data_path),
             settings_path,
             Registry::new(),
             mcp_exe,
+            ollama,
         )
     }
 
@@ -89,6 +103,7 @@ impl AppState {
         settings_path: PathBuf,
         registry: Registry,
         mcp_exe: PathBuf,
+        ollama: Option<(String, String)>,
     ) -> Self {
         let (tx, _rx) = broadcast::channel(16);
         let settings = Settings::load(&settings_path);
@@ -101,6 +116,7 @@ impl AppState {
             settings_path,
             registry: Arc::new(registry),
             mcp_exe,
+            ollama,
         }
     }
 

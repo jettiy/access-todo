@@ -576,7 +576,7 @@ pub fn tool_catalog() -> Vec<Value> {
         }),
         serde_json::json!({
             "name": "add_devnote",
-            "description": "개발노트를 추가합니다 (회고, 이슈, 플레이테스트). 에이전트가 작업 후 기록용.",
+            "description": "개발노트를 추가합니다 (회고, 이슈, 플레이테스트). 작업 공간 태그는 자동 지정됩니다 — 로컬 qwen이 노트를 게임/프로젝트로 분류하고, 못 하면 파일럿이 선택한 활성 작업 공간으로 들어갑니다. 다른 작업 공간을 명시하려면 tags에 \"game:이름\" 또는 \"project:이름\"을 넣으세요.",
             "inputSchema": {
                 "type": "object",
                 "required": ["note_type", "title", "body"],

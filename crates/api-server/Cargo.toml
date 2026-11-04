@@ -17,6 +17,7 @@ anyhow = "1"
 http = "1"
 chrono = { workspace = true }
 agent-registry = { path = "../agent-registry" }
+reqwest = { workspace = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }

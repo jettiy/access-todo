@@ -4,6 +4,7 @@
 //! resulting todo's audit fields, so caller attribution is preserved.
 
 mod agents;
+pub mod classifier;
 mod auth;
 mod routes;
 pub mod settings;

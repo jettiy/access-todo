@@ -147,6 +147,9 @@ pub struct DevNoteListQ {
     pub version: Option<String>,
     #[serde(default)]
     pub agent: Option<String>,
+    /// 작업 공간 태그 필터 (예: "game:마을도우미")
+    #[serde(default)]
+    pub tag: Option<String>,
 }
 
 fn parse_note_type(s: &str) -> NoteType {
@@ -209,6 +212,7 @@ pub fn router(state: AppState) -> Router {
         .route("/devnotes/timeline", get(devnotes_timeline))
         .route("/devnotes/by-version/:ver", get(devnotes_by_version))
         .route("/devnotes/worklog/generate", post(generate_worklog_handler))
+        .route("/devnotes/classify-untagged", post(classify_untagged))
         .route("/devnotes/:id", get(one_devnote).patch(update_devnote).delete(delete_devnote))
         .route("/settings", get(agents::get_settings).put(agents::put_settings))
         .route("/agents", get(agents::list_agents))
@@ -636,6 +640,10 @@ async fn list_devnotes(
         let tag = format!("agent:{agent}");
         notes.retain(|n| n.tags.iter().any(|t| t == &tag) || n.created_by == *agent);
     }
+    // 작업 공간 태그 필터 (game:* / project:*)
+    if let Some(ref tag) = q.tag {
+        notes.retain(|n| n.tags.iter().any(|t| t == tag));
+    }
     Json(serde_json::json!({ "devnotes": notes }))
 }
 
@@ -656,6 +664,28 @@ async fn add_devnote(
     Json(b): Json<NewDevNote>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let actor = agent_from_headers(&h);
+    // 작업 공간 자동 태깅 (규칙: 에이전트 명시 태그 > 로컬 qwen 분류 > 활성 작업 공간 > 미지정)
+    let mut tags = b.tags.unwrap_or_default();
+    if !tags.iter().any(|t| t.starts_with("game:") || t.starts_with("project:")) {
+        let (candidates, active) = {
+            let st = s.settings.lock().await;
+            (st.workspace_candidates(), st.active_workspace_tag())
+        };
+        let mut chosen: Option<String> = None;
+        if !candidates.is_empty() {
+            if let Some((base, model)) = &s.ollama {
+                chosen = crate::classifier::classify_note(
+                    base, model, &b.title, &b.body, &candidates,
+                )
+                .await
+                .filter(|c| candidates.contains(c));
+            }
+        }
+        let tag = chosen.or(active);
+        if let Some(t) = tag {
+            tags.push(t);
+        }
+    }
     let note = {
         let mut st = s.store.lock().await;
         st.add_devnote(
@@ -665,7 +695,7 @@ async fn add_devnote(
                 body: b.body,
                 game_system: b.game_system.as_deref().map(parse_game_system),
                 version: b.version,
-                tags: b.tags.unwrap_or_default(),
+                tags,
             },
             &actor,
         )
@@ -757,9 +787,73 @@ async fn devnotes_by_version(
 
 async fn devnotes_timeline(
     State(s): State<AppState>,
+    q: Query<DevNoteListQ>,
 ) -> Json<serde_json::Value> {
     let st = s.store.lock().await;
     let mut notes = st.list_devnotes(NoteFilter::default());
+    if let Some(ref tag) = q.tag {
+        // 태그 지정 시: 매칭 노트 + 미지정(game:/project: 태그 없음) 노트를 함께 반환 —
+        // 노트 창이 미지정 항목도 보여 재분류할 수 있게.
+        notes.retain(|n| n.tags.iter().any(|t| t == tag) || !n.tags.iter().any(|t| t.starts_with("game:") || t.starts_with("project:")));
+    }
     notes.sort_by(|a, b| b.created_at.cmp(&a.created_at));
     Json(serde_json::json!({ "devnotes": notes }))
+}
+
+/// POST /devnotes/classify-untagged — 기존 노트 중 작업 공간 태그가 없는 것을
+/// 로컬 Ollama로 일괄 분류한다 (설정창 "기존 노트 자동 분류" 버튼).
+async fn classify_untagged(
+    State(s): State<AppState>,
+    h: HeaderMap,
+) -> Json<serde_json::Value> {
+    let actor = agent_from_headers(&h);
+    let Some((base, model)) = s.ollama.clone() else {
+        return Json(serde_json::json!({ "error": "Ollama 비활성" }));
+    };
+    let (candidates, active) = {
+        let st = s.settings.lock().await;
+        (st.workspace_candidates(), st.active_workspace_tag())
+    };
+    if candidates.is_empty() {
+        return Json(serde_json::json!({ "error": "등록된 게임/프로젝트가 없습니다" }));
+    }
+    let targets: Vec<_> = {
+        let st = s.store.lock().await;
+        st.list_devnotes(NoteFilter::default())
+            .into_iter()
+            .filter(|n| !n.tags.iter().any(|t| t.starts_with("game:") || t.starts_with("project:")))
+            .map(|n| (n.id, n.title, n.body))
+            .collect()
+    };
+    let mut classified = 0;
+    let mut fallback = 0;
+    let mut skipped = 0;
+    for (id, title, body) in targets {
+        let tag = crate::classifier::classify_note(&base, &model, &title, &body, &candidates)
+            .await
+            .filter(|c| candidates.contains(c))
+            .or_else(|| active.clone());
+        match tag {
+            Some(t) => {
+                let mut st = s.store.lock().await;
+                if let Some(n) = st.list_devnotes(NoteFilter::default()).into_iter().find(|n| n.id == id) {
+                    let mut tags = n.tags.clone();
+                    tags.push(t.clone());
+                    let _ = st.update_devnote(&id, DevNotePatch { tags: Some(tags), ..Default::default() }, &actor);
+                    if t.starts_with("game:") || t.starts_with("project:") {
+                        if candidates.contains(&t) { classified += 1; } else { fallback += 1; }
+                    } else { fallback += 1; }
+                }
+            }
+            None => skipped += 1,
+        }
+    }
+    if classified + fallback > 0 {
+        s.persist_and_push(&actor).await;
+    }
+    Json(serde_json::json!({
+        "classified": classified,   // qwen이 분류한 건수
+        "fallback": fallback,       // 활성 작업 공간으로 처리한 건수
+        "skipped": skipped,         // 분류 못 한 건수
+    }))
 }

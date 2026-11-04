@@ -98,6 +98,16 @@ fn apply_window_visibility(app: &tauri::AppHandle, enabled: Option<&[String]>) {
     }
 }
 
+/// Set a window's title from a webview (dev-notes window renames itself
+/// when the workspace mode/selection changes: 게임 개발노트 ↔ 프로젝트노트).
+#[tauri::command]
+async fn set_window_title(app: tauri::AppHandle, label: String, title: String) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window(&label) {
+        w.set_title(&title).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 /// Settings window calls this after a toggle so post-its appear/disappear
 /// immediately (제품기획 v1.2 — 활성한 에이전트만 포스트잇).
 #[tauri::command]
@@ -181,7 +191,7 @@ pub fn run() {
                 )
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![api_call, open_settings, sync_agent_windows])
+        .invoke_handler(tauri::generate_handler![api_call, open_settings, sync_agent_windows, set_window_title])
         .setup(|app| {
             for (label, title, x, y, _bg) in AGENT_WINDOWS {
                 let url = WebviewUrl::App(format!("index.html?agent={label}").into());
@@ -192,7 +202,7 @@ pub fn run() {
                     .inner_size(w, h)
                     .position(*x, *y)
                     .decorations(false)
-                    .always_on_top(*label != "devnotes") // 개발노트 창은 기본적으로 핀 해제
+                    .always_on_top(false) // 기본 핀 해제 — 파일럿이 📌 토글로 켬 (2026-11-05 요구)
                     .transparent(false)
                     .resizable(true)
                     .skip_taskbar(false)

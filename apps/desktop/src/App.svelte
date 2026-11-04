@@ -20,7 +20,7 @@
   let synced = "로딩중";
   let errorMsg = "";
   let collapsed = false;
-  let onTop = true;
+  let onTop = false; // 기본 핀 해제 — 📌 누를 때만 항상 위 (2026-11-05)
   let collapsedCats: Set<string> = new Set();
   let firstLoad = true;
   let flashIds: Set<string> = new Set();

@@ -7,7 +7,7 @@
   import { onMount } from "svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { invoke } from "@tauri-apps/api/core";
-  import { agentsApi, settingsApi, type AgentRow, type SettingsInfo } from "./api";
+  import { agentsApi, devnoteApi, settingsApi, type AgentRow, type SettingsInfo } from "./api";
 
   const LEVELS: { id: string; label: string; hint: string }[] = [
     { id: "beginner", label: "초보", hint: "쉬운 비유 위주 · 비전공자" },
@@ -27,6 +27,9 @@
   let notice = "";
   let scannedAt = "";
   let customName = "";
+  let newGame = "";
+  let newProject = "";
+  let classifying = false;
 
   $: enabledCount = agents.filter((a) => a.enabled).length;
 
@@ -62,6 +65,56 @@
     if (!settings || settings.sync_mode === mode) return;
     const r = await settingsApi.put({ sync_mode: mode });
     settings = { ...settings, ...r.settings };
+  }
+
+  // ── 작업 공간 (게임/프로젝트 모드) ──
+
+  async function putWorkspace(patch: Record<string, unknown>) {
+    if (!settings) return;
+    const r = await settingsApi.put(patch as never);
+    settings = { ...settings, ...r.settings };
+  }
+
+  async function addGame() {
+    const name = newGame.trim();
+    if (!settings || !name || settings.games.includes(name)) return;
+    const games = [...settings.games, name];
+    await putWorkspace({ games, active_game: settings.active_game ?? name });
+    newGame = "";
+  }
+
+  async function addProject() {
+    const name = newProject.trim();
+    if (!settings || !name || settings.projects.includes(name)) return;
+    const projects = [...settings.projects, name];
+    await putWorkspace({ projects, active_project: settings.active_project ?? name });
+    newProject = "";
+  }
+
+  async function removeWorkspace(kind: "game" | "project") {
+    if (!settings) return;
+    if (kind === "game") {
+      if (!confirm(`'${settings.active_game}'을(를) 목록에서 삭제?`)) return;
+      const games = settings.games.filter((g) => g !== settings.active_game);
+      await putWorkspace({ games, active_game: null });
+    } else {
+      if (!confirm(`'${settings.active_project}'을(를) 목록에서 삭제?`)) return;
+      const projects = settings.projects.filter((p) => p !== settings.active_project);
+      await putWorkspace({ projects, active_project: null });
+    }
+  }
+
+  async function classifyOld() {
+    classifying = true;
+    try {
+      const r = await devnoteApi.classifyUntagged();
+      if (r.error) notice = `자동 분류 실패: ${r.error}`;
+      else notice = `기존 노트 분류 완료 — qwen 판정 ${r.classified}건, 기본 작업 공간 ${r.fallback}건, 미분류 ${r.skipped}건`;
+    } catch (e) {
+      notice = `자동 분류 실패: ${(e as Error).message}`;
+    } finally {
+      classifying = false;
+    }
   }
 
   // 토글 후 포스트잇 창을 즉시 표시/숨김 (활성한 에이전트만 포스트잇 — v1.2)
@@ -144,6 +197,46 @@
       </p>
     </section>
 
+    <section class="panel">
+      <h2>작업 공간 <span class="sub">노트 창과 자동 분류의 기준</span></h2>
+      <div class="segments">
+        <button class="segment" class:active={settings.workspace_mode !== "project"} on:click={() => putWorkspace({ workspace_mode: "game" })}>🎮 게임 개발</button>
+        <button class="segment" class:active={settings.workspace_mode === "project"} on:click={() => putWorkspace({ workspace_mode: "project" })}>📦 프로젝트</button>
+      </div>
+      {#if settings.workspace_mode !== "project"}
+        <div class="ws-row">
+          <select bind:value={settings.active_game} on:change={(e) => putWorkspace({ active_game: e.currentTarget.value || null })}>
+            <option value="">— 게임 선택 —</option>
+            {#each settings.games as g}<option value={g}>{g}</option>{/each}
+          </select>
+          <input placeholder="새 게임 이름" bind:value={newGame} on:keydown={(e) => e.key === "Enter" && addGame()} />
+          <button class="ghost" on:click={addGame}>추가</button>
+          {#if settings.active_game}
+            <button class="ghost" on:click={() => removeWorkspace("game")} title="목록에서 삭제">🗑</button>
+          {/if}
+        </div>
+      {:else}
+        <div class="ws-row">
+          <select bind:value={settings.active_project} on:change={(e) => putWorkspace({ active_project: e.currentTarget.value || null })}>
+            <option value="">— 프로젝트 선택 —</option>
+            {#each settings.projects as p}<option value={p}>{p}</option>{/each}
+          </select>
+          <input placeholder="새 프로젝트 이름" bind:value={newProject} on:keydown={(e) => e.key === "Enter" && addProject()} />
+          <button class="ghost" on:click={addProject}>추가</button>
+          {#if settings.active_project}
+            <button class="ghost" on:click={() => removeWorkspace("project")} title="목록에서 삭제">🗑</button>
+          {/if}
+        </div>
+      {/if}
+      <p class="hint">
+        노트 창 제목과 내용이 선택한 작업 공간으로 바뀝니다. 새 노트는 로컬 qwen이 자동 분류하고,
+        못 분류하면 선택한 작업 공간으로 들어갑니다.
+        <button class="ghost classify" on:click={classifyOld} disabled={classifying}>
+          {classifying ? "분류 중..." : "🤖 기존 노트 자동 분류"}
+        </button>
+      </p>
+    </section>
+
     <section class="panel grow">
       <h2>에이전트 <span class="sub">활성한 에이전트만 포스트잇·연동됩니다</span></h2>
       <div class="cards">
@@ -212,6 +305,15 @@
   .segment:hover { border-color: #4a4a6a; }
   .segment.active { background: #2f4a8a; border-color: #5b7fd4; color: #fff; font-weight: 600; }
 
+  .ws-row { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+  .ws-row select, .ws-row input {
+    background: #23232f; border: 1px solid #33334a; border-radius: 8px;
+    color: #e6e6ef; padding: 7px 8px; font-size: 12.5px; outline: none; min-width: 0;
+  }
+  .ws-row select { flex: 1.2; }
+  .ws-row input { flex: 1; }
+  .ws-row select:focus, .ws-row input:focus { border-color: #5b7fd4; }
+  .classify { margin-left: 6px; white-space: nowrap; }
   .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .card {
     display: flex; align-items: center; gap: 10px;

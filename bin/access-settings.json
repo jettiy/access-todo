@@ -5,5 +5,16 @@
     "codex"
   ],
   "pilot_level": "auto",
-  "sync_mode": "gist"
+  "sync_mode": "gist",
+  "workspace_mode": "game",
+  "active_game": "호모 이코노미쿠스",
+  "active_project": null,
+  "games": [
+    "호모 이코노미쿠스",
+    "커플팜"
+  ],
+  "projects": [
+    "access-todo",
+    "homo-client"
+  ]
 }

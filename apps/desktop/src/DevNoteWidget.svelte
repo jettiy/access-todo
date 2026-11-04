@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { devnoteApi, type DevNote, type NoteType, type GameSystem } from "./api";
+  import { invoke } from "@tauri-apps/api/core";
+  import { devnoteApi, settingsApi, type DevNote, type NoteType, type GameSystem } from "./api";
   import DevNoteCard from "./DevNoteCard.svelte";
   import DevNoteEditor from "./DevNoteEditor.svelte";
 
@@ -19,6 +20,14 @@
   let collapsed = false;
   let onTop = false;
 
+  // 작업 공간(게임/프로젝트 모드) — 설정에 따라 제목과 필터가 바뀐다
+  let wsMode: "game" | "project" = "game";
+  let wsName = "";
+  $: activeTag = wsName ? `${wsMode === "game" ? "game" : "project"}:${wsName}` : "";
+  $: headerTitle = wsName
+    ? (wsMode === "game" ? `📝 ${wsName} 개발노트` : `📦 ${wsName} 프로젝트노트`)
+    : (wsMode === "game" ? "📝 게임 개발노트" : "📦 프로젝트노트");
+
   const appWindow = getCurrentWindow();
 
   const tabs: { value: NoteType | "all"; label: string; emoji: string }[] = [
@@ -31,7 +40,11 @@
 
   async function refresh() {
     try {
-      const r = await devnoteApi.timeline();
+      // 설정(작업 공간)과 타임라인을 함께 받는다 — 설정이 바뀌면 5초 폴링/이벤트로 자동 반영
+      const [st, r] = await Promise.all([settingsApi.get(), devnoteApi.timeline(activeTag || undefined)]);
+      wsMode = st.workspace_mode === "project" ? "project" : "game";
+      wsName = (wsMode === "game" ? st.active_game : st.active_project) ?? "";
+      invoke("set_window_title", { label: "devnotes", title: headerTitle }).catch(() => {});
       notes = r.devnotes;
       const vset = new Set<string>();
       notes.forEach((n) => { if (n.version) vset.add(n.version); });
@@ -41,6 +54,10 @@
     } catch (e) {
       errorMsg = `서버 연결 실패: ${(e as Error).message}`;
     }
+  }
+
+  function isUnassigned(n: DevNote): boolean {
+    return !n.tags.some((t) => t.startsWith("game:") || t.startsWith("project:"));
   }
 
   $: filtered = notes
@@ -114,7 +131,7 @@
 
 <div class="widget" class:collapsed>
   <header class="top-bar" on:mousedown={titleMousedown}>
-    <span class="title" on:mousedown={titleMousedown}>📝 게임 개발노트</span>
+    <span class="title" on:mousedown={titleMousedown}>{headerTitle}</span>
     <span class="synced">{synced}</span>
     <div class="window-controls" on:mousedown|stopPropagation>
       <button class="win-btn" on:click={toggleOnTop} title={onTop ? "항상 위 해제" : "항상 위"} class:active={onTop}>📌</button>
@@ -143,6 +160,7 @@
 
     <div class="filter-bar">
       <input type="text" bind:value={searchQuery} placeholder="🔍 검색..." />
+      {#if wsMode === "game"}
       <select bind:value={systemFilter}>
         <option value="">🎮 전체 시스템</option>
         <option value="combat">⚔️ 전투</option>
@@ -157,6 +175,7 @@
         <option value="network">🌐 네트워크</option>
         <option value="etc">📦 기타</option>
       </select>
+      {/if}
       <select bind:value={versionFilter}>
         <option value="">📦 전체 버전</option>
         {#each allVersions as v}
@@ -224,6 +243,12 @@
     flex: 1; padding: 4px 6px; font-size: 11px; border: 1px solid #ddd; border-radius: 4px;
   }
   .note-list { flex: 1; overflow-y: auto; padding: 8px; }
+  .note-wrap { position: relative; }
+  .unassigned {
+    position: absolute; top: 6px; right: 8px; z-index: 1;
+    font-size: 9px; font-weight: 700; color: #856404;
+    background: #fff3cd; border: 1px solid #ffe08a; border-radius: 4px; padding: 1px 5px;
+  }
   .empty { text-align: center; color: #999; font-size: 12px; padding: 40px 20px; }
   .bottom-bar {
     display: flex; gap: 8px; padding: 10px 14px; background: white; border-top: 1px solid #eee;

@@ -46,7 +46,19 @@ Use your tool's short name — e.g. `claude-code`, `codex`, `zcode`, `openclaw`,
 | Priority: `high` = outage/security/data loss, `medium` = features & normal bugs, `low` = docs/cleanup | | |
 | Never write "done" without a summary | | `summary="작업 완료"` |
 
-## 3. Tool map (16)
+## 2.5 Workspaces (game / project mode)
+
+The pilot picks a mode and target (game or project name) in the settings window;
+the notes window follows it. You never need to tag notes yourself:
+
+1. explicit tag in `add_devnote` (`tags: ["game:Name"]` / `["project:Name"]`) wins,
+2. otherwise the local qwen classifier reads the note and picks one,
+3. otherwise the pilot's active workspace,
+4. otherwise the note stays unassigned (shows a "미지정" badge).
+
+`game_system` fields (combat/inventory/…) only make sense in game mode.
+
+## 3. Tool map (18)
 
 TODO: `list_todos` · `get_today_todos` · `get_todo` · `add_todo` · `add_todos_batch` ·
 `update_todo` · `toggle_todo` · `complete_todo` ★ · `delete_todo` · `search_todos`
